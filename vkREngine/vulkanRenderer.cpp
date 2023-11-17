@@ -9,12 +9,12 @@ VulkanRenderer::~VulkanRenderer() {
 }
 
 int VulkanRenderer::Init(SDL_Window *window) {
-    mWindow = window;
+    m_window = window;
     
     try {
         CreateInstance();
     } catch (const std::runtime_error& e) {
-        std::cerr << "ERROR:  " << e.what() << "\n";
+        std::cerr << "ERROR: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
     return 0;
@@ -31,29 +31,36 @@ void VulkanRenderer::CreateInstance() {
         VK_VERSION_1_3              // The vulkan version
     };
     
-    uint32_t sdlExtensionCount = 0;
-    std::vector<const char*> sdlExtensions;
+    uint32_t requiredExtensionCount = 0;
+    std::vector<const char*> requiredExtensions;
     
-    SDL_Vulkan_GetInstanceExtensions(mWindow, &sdlExtensionCount, NULL);
-    sdlExtensions.reserve(sdlExtensionCount);
     
-    if (SDL_Vulkan_GetInstanceExtensions(mWindow, &sdlExtensionCount, sdlExtensions.data()) == SDL_FALSE) {
-        throw std::runtime_error("ERROR: Cannot get instance extensions\n");
+    SDL_Vulkan_GetInstanceExtensions(m_window, &requiredExtensionCount, nullptr);
+    requiredExtensions.resize(requiredExtensionCount);
+    
+    if (SDL_Vulkan_GetInstanceExtensions(m_window, &requiredExtensionCount, requiredExtensions.data()) == SDL_FALSE) {
+        throw std::runtime_error("Failed to get Instance Extensions");
     }
+    
+    requiredExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     
     VkInstanceCreateInfo createInfo = {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         nullptr,
-        0x0,
+        VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
         &appInfo,
         0,
         nullptr,
-        sdlExtensionCount,
-        sdlExtensions.data()
+        static_cast<uint32_t>(requiredExtensions.size()),
+        requiredExtensions.data()
     };
     
-    vkCreateInstance(&createInfo, nullptr, &instance);
+    VkResult result = vkCreateInstance(&createInfo, nullptr, &m_instance);
     
+    if(result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Vulkan Instance");
+        
+    }
 }
 
 

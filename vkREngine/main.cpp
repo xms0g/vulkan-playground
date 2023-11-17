@@ -1,10 +1,10 @@
-#include "VulkanRenderer.h"
+#include "vulkanRenderer.h"
 
 
 SDL_Window* sdlWindow;
 VulkanRenderer renderer;
 
-void InitWindow(const char* title = "Test Window", int width = 800, int height = 600) {
+void initWindow(const char* title = "Test Window", int width = 800, int height = 600) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cerr << "Error initializing SDL" << std::endl;
         return;
@@ -18,9 +18,9 @@ void InitWindow(const char* title = "Test Window", int width = 800, int height =
 
 int main(int argc, const char * argv[]) {
     
-    InitWindow();
+    initWindow();
     
-    if (renderer.Init(sdlWindow) == EXIT_FAILURE) {
+    if (renderer.init(sdlWindow) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
     
