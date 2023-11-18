@@ -1,18 +1,19 @@
 #include "vulkanRenderer.h"
 
 
-SDL_Window* sdlWindow;
+GLFWwindow* window;
 VulkanRenderer renderer;
 
-void initWindow(const char* title = "Test Window", int width = 800, int height = 600) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+void initWindow(const char* title = "vkREngine", int width = 800, int height = 600) {
+    if (glfwInit() != GLFW_TRUE) {
         std::cerr << "Error initializing SDL" << std::endl;
         return;
     }
     
-    sdlWindow = SDL_CreateWindow(title,
-                                 SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED, height, width,
-                                 SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    
+    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     
 }
 
@@ -20,21 +21,15 @@ int main(int argc, const char * argv[]) {
     
     initWindow();
     
-    if (renderer.init(sdlWindow) == EXIT_FAILURE) {
+    if (renderer.init(window) == EXIT_FAILURE) {
         return EXIT_FAILURE;
     }
     
-    SDL_Event event;
-    bool running = true;
-    while(running) {
-        while(SDL_PollEvent(&event)) {
-            if(event.type == SDL_QUIT) {
-                running = false;
-            }
-        }
+    while(!glfwWindowShouldClose(window)) {
+           glfwPollEvents();
     }
     
-    SDL_DestroyWindow(sdlWindow);
-    SDL_Quit();
+    glfwDestroyWindow(window);
+    glfwTerminate();
     return 0;
 }

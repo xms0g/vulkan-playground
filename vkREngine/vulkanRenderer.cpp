@@ -1,4 +1,5 @@
 #include "vulkanRenderer.h"
+#include <cstring>
 
 
 VulkanRenderer::VulkanRenderer() {
@@ -9,7 +10,7 @@ VulkanRenderer::~VulkanRenderer() {
     vkDestroyInstance(m_instance, nullptr);
 }
 
-int VulkanRenderer::init(SDL_Window *window) {
+int VulkanRenderer::init(GLFWwindow* window) {
     m_window = window;
     
     try {
@@ -32,19 +33,27 @@ void VulkanRenderer::createInstance() {
         VK_API_VERSION_1_3          // The vulkan version
     };
     
-    uint32_t requiredExtensionCount = 0;
-    std::vector<const char*> requiredExtensions;
-        
-    SDL_Vulkan_GetInstanceExtensions(m_window, &requiredExtensionCount, nullptr);
-    requiredExtensions.resize(requiredExtensionCount);
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions;
     
-    SDL_bool result = SDL_Vulkan_GetInstanceExtensions(m_window, &requiredExtensionCount, requiredExtensions.data());
-    if (result == SDL_FALSE) {
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    if (glfwExtensions == nullptr) {
         throw std::runtime_error("Failed to get Instance Extensions");
     }
+    
+    std::vector<const char*> requiredExtensions;
+    for(uint32_t i = 0; i < glfwExtensionCount; i++) {
+        requiredExtensions.emplace_back(glfwExtensions[i]);
+    }
+    
 #ifdef __APPLE__
     requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
+    
+    // Check instance extensions supported
+    if (!checkInstanceExtensionSupport(requiredExtensions)) {
+        throw std::runtime_error("VkInstance does not support required extensions");
+    }
     
     VkInstanceCreateInfo createInfo = {
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,             //sType
@@ -66,6 +75,31 @@ void VulkanRenderer::createInstance() {
         
     }
 }
+
+bool VulkanRenderer::checkInstanceExtensionSupport(std::vector<const char *>& checkExtensions) {
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    
+    std::vector<VkExtensionProperties> extentions{extensionCount};
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extentions.data());
+    
+    for (const auto& checkExtension : checkExtensions) {
+        bool hasExtension = false;
+        for (const auto& extension : extentions) {
+            if (std::strcmp(checkExtension, extension.extensionName)) {
+                hasExtension = true;
+                break;
+            }
+        }
+        
+        if (!hasExtension) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 
 
 

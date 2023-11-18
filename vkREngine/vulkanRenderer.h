@@ -1,8 +1,6 @@
 #pragma once
-
-#include <vulkan/vulkan.hpp>
-#include <SDL2/SDL_vulkan.h>
-#include <SDL2/SDL.h>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
 #include <stdexcept>
 #include <vector>
 #include <iostream>
@@ -12,14 +10,15 @@ public:
     VulkanRenderer();
     ~VulkanRenderer();
     
-    int init(SDL_Window* window);
+    int init(GLFWwindow* window);
     
 private:
-    SDL_Window* m_window;
+    GLFWwindow* m_window;
     
     // Vulkan components
     VkInstance m_instance;
     
     void createInstance();
+    bool checkInstanceExtensionSupport(std::vector<const char*>& checkExtensions);
 };
 
