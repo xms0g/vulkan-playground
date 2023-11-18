@@ -81,28 +81,28 @@ void VulkanRenderer::createInstance() {
 void VulkanRenderer::createLogicalDevice() {
     QueueFamilyIndices indices = getQueueFamilies(coreDevice.physicalDevice);
     
-    float priority = 1.0f;
+    float priority = 1.0f; // Vulkan needs to know how to handle multiple multiple queues. [1] is high priority.
     VkDeviceQueueCreateInfo queueCreateInfo = {
-        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        nullptr,
-        0,
-        static_cast<uint32_t>(indices.graphicsFamily),
-        1,
-        &priority
+        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,     //sType
+        nullptr,                                        //pNext
+        0,                                              //flags
+        static_cast<uint32_t>(indices.graphicsFamily),  //queueFamilyIndex
+        1,                                              //queueCount
+        &priority                                       //pQueuePriorities
     };
     
     VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
     VkDeviceCreateInfo deviceCreateInfo = {
-        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        nullptr,
-        0,
-        1,
-        &queueCreateInfo,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        &physicalDeviceFeatures
+        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,   //sType
+        nullptr,                                //pNext
+        0,                                      //flags
+        1,                                      //queueCreateInfoCount
+        &queueCreateInfo,                       //pQueueCreateInfos
+        0,                                      //enabledLayerCount
+        nullptr,                                //ppEnabledLayerNames
+        0,                                      //enabledExtensionCount
+        nullptr,                                //ppEnabledExtensionNames
+        &physicalDeviceFeatures                 //pEnabledFeatures
     };
     
     if (vkCreateDevice(coreDevice.physicalDevice, &deviceCreateInfo, nullptr, &coreDevice.logicalDevice) != VK_SUCCESS) {

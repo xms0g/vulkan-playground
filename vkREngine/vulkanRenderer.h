@@ -30,11 +30,10 @@ private:
     void createLogicalDevice();
     
     void getPhysicalDevice();
+    QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
     
     // Support Functions
     bool checkInstanceExtensionSupport(std::vector<const char*>& checkExtensions);
     bool checkDeviceSuitable(VkPhysicalDevice device);
-    
-    QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
 };
 
