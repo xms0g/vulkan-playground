@@ -15,11 +15,21 @@ int VulkanRenderer::init(GLFWwindow* window) {
     
     try {
         createInstance();
+        getPhysicalDevice();
     } catch (const std::runtime_error& e) {
         std::cerr << "ERROR: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
     return 0;
+}
+
+void VulkanRenderer::getPhysicalDevice() {
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+    
+    std::vector<VkPhysicalDevice> physicalDevices{deviceCount};
+    vkEnumeratePhysicalDevices(m_instance, &deviceCount, physicalDevices.data());
+    
 }
 
 void VulkanRenderer::createInstance() {
@@ -77,6 +87,7 @@ void VulkanRenderer::createInstance() {
 }
 
 bool VulkanRenderer::checkInstanceExtensionSupport(std::vector<const char *>& checkExtensions) {
+    // Get the number of extensions
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
     

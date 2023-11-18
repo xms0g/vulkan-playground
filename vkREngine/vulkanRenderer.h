@@ -1,4 +1,5 @@
 #pragma once
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <stdexcept>
@@ -17,8 +18,13 @@ private:
     
     // Vulkan components
     VkInstance m_instance;
+    struct {
+        VkPhysicalDevice physicalDevice;
+        VkDevice logicalDevice;
+    } MainDevice;
     
     void createInstance();
+    void getPhysicalDevice();
     bool checkInstanceExtensionSupport(std::vector<const char*>& checkExtensions);
 };
 
