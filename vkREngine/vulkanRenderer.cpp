@@ -17,8 +17,7 @@ int VulkanRenderer::init(GLFWwindow* window) {
         createInstance();
         getPhysicalDevice();
     } catch (const std::runtime_error& e) {
-        std::cerr << "ERROR: " << e.what() << "\n";
-        return EXIT_FAILURE;
+        throw std::runtime_error(e.what());
     }
     return 0;
 }

@@ -7,18 +7,20 @@
 
 class Window : public IWindow<GLFWwindow> {
 public:
-    explicit Window(const char* title, int width = 800, int height = 600, bool fullscreen = false);
-
+    Window() = default;
+    
     ~Window() override;
-
-    void clearImpl(float r, float g, float b, float a) override;
     
     void swapBuffer() override;
     
     void updateFpsCounter(float dt);
 
 private:
-    const std::string m_title;
+    void initImpl(const char* title, int width, int height, bool fullscreen) override;
+
+    void clearImpl(float r, float g, float b, float a) override;
+
+    std::string m_title;
 
     double m_previousSeconds{};
     double m_currentSeconds{};

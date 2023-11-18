@@ -2,10 +2,16 @@
 #include <iostream>
 
 
-Window::Window(const char* title, int width, int height, bool fullscreen) : m_title(title) {
+Window::~Window() {
+    glfwDestroyWindow(m_window);
+    glfwTerminate();
+}
+
+void Window::initImpl(const char *title, int width, int height, bool fullscreen) {
+    m_title = title;
+    
     if (glfwInit() != GLFW_TRUE) {
-        std::cerr << "Error initializing SDL" << std::endl;
-        return;
+        throw std::runtime_error("Failed to initialize Window");
     }
     
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -14,9 +20,12 @@ Window::Window(const char* title, int width, int height, bool fullscreen) : m_ti
     m_window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 }
 
-Window::~Window() {
-    glfwDestroyWindow(m_window);
-    glfwTerminate();
+void Window::clearImpl(float r, float g, float b, float a) {
+
+}
+
+void Window::swapBuffer() {
+    glfwSwapBuffers(m_window);
 }
 
 void Window::updateFpsCounter(float dt) {
@@ -38,10 +47,3 @@ void Window::updateFpsCounter(float dt) {
     m_frameCount++;
 }
 
-void Window::swapBuffer() {
-    glfwSwapBuffers(m_window);
-}
-
-void Window::clearImpl(float r, float g, float b, float a) {
-
-}
