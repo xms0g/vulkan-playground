@@ -12,14 +12,14 @@ public:
     VulkanRenderer();
     ~VulkanRenderer();
     
-    int Init(SDL_Window* window);
+    int init(SDL_Window* window);
     
 private:
-    SDL_Window* mWindow;
+    SDL_Window* m_window;
     
     // Vulkan components
-    VkInstance instance;
+    VkInstance m_instance;
     
-    void CreateInstance();
+    void createInstance();
 };
 

@@ -11,7 +11,7 @@ void initWindow(const char* title = "Test Window", int width = 800, int height =
     }
     
     sdlWindow = SDL_CreateWindow(title,
-                                 SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,height,width,
+                                 SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED, height, width,
                                  SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
     
 }
