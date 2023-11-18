@@ -7,6 +7,7 @@ VulkanRenderer::VulkanRenderer() {
 }
 
 VulkanRenderer::~VulkanRenderer() {
+    vkDestroyDevice(coreDevice.logicalDevice, nullptr);
     vkDestroyInstance(m_instance, nullptr);
 }
 
@@ -16,19 +17,11 @@ int VulkanRenderer::init(GLFWwindow* window) {
     try {
         createInstance();
         getPhysicalDevice();
+        createLogicalDevice();
     } catch (const std::runtime_error& e) {
         throw std::runtime_error(e.what());
     }
     return 0;
-}
-
-void VulkanRenderer::getPhysicalDevice() {
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-    
-    std::vector<VkPhysicalDevice> physicalDevices{deviceCount};
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, physicalDevices.data());
-    
 }
 
 void VulkanRenderer::createInstance() {
@@ -85,11 +78,68 @@ void VulkanRenderer::createInstance() {
     }
 }
 
+void VulkanRenderer::createLogicalDevice() {
+    QueueFamilyIndices indices = getQueueFamilies(coreDevice.physicalDevice);
+    
+    float priority = 1.0f;
+    VkDeviceQueueCreateInfo queueCreateInfo = {
+        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        nullptr,
+        0,
+        static_cast<uint32_t>(indices.graphicsFamily),
+        1,
+        &priority
+    };
+    
+    VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
+    VkDeviceCreateInfo deviceCreateInfo = {
+        VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        nullptr,
+        0,
+        1,
+        &queueCreateInfo,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        &physicalDeviceFeatures
+    };
+    
+    if (vkCreateDevice(coreDevice.physicalDevice, &deviceCreateInfo, nullptr, &coreDevice.logicalDevice) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create a Logical Device");
+    }
+    
+    // Handle queues created
+    vkGetDeviceQueue(coreDevice.logicalDevice, indices.graphicsFamily, 0, &graphicsQueue);
+}
+
+void VulkanRenderer::getPhysicalDevice() {
+    // Get the number of physical device
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+    
+    if (deviceCount == 0) {
+        throw std::runtime_error("Cannot find GPU that supports Vulkan instance");
+    }
+    
+    // Get the list of the physical device
+    std::vector<VkPhysicalDevice> physicalDevices{deviceCount};
+    vkEnumeratePhysicalDevices(m_instance, &deviceCount, physicalDevices.data());
+    
+    for (const auto&device : physicalDevices) {
+        if (checkDeviceSuitable(device)) {
+            coreDevice.physicalDevice = device;
+            break;
+        }
+    }
+}
+
 bool VulkanRenderer::checkInstanceExtensionSupport(std::vector<const char *>& checkExtensions) {
     // Get the number of extensions
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
     
+    // Get the list of avaliable extension
     std::vector<VkExtensionProperties> extentions{extensionCount};
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extentions.data());
     
@@ -109,6 +159,49 @@ bool VulkanRenderer::checkInstanceExtensionSupport(std::vector<const char *>& ch
     
     return true;
 }
+
+bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
+    // Information about the device(ID, name, type, vendor, etc)
+//    VkPhysicalDeviceProperties deviceProperties;
+//    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+//    
+//    // Information about what the device can do(geo shader, tess shader, etc)
+//    VkPhysicalDeviceFeatures deviceFeatures;
+//    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    
+    QueueFamilyIndices indices = getQueueFamilies(device);
+    
+    return indices.isValid();
+}
+
+QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) { 
+    QueueFamilyIndices indices;
+    
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    
+    std::vector<VkQueueFamilyProperties> queueFamilies{queueFamilyCount};
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    
+    int i = 0;
+    for (const auto& queueFamily : queueFamilies) {
+        if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            indices.graphicsFamily = i;
+        }
+        
+        if (indices.isValid())
+            break;
+        
+        i++;
+    }
+    
+    return indices;
+}
+
+
+
+
+
 
 
 

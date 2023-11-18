@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <vector>
 #include <iostream>
+#include "utilities.hpp"
 
 class VulkanRenderer {
 public:
@@ -21,10 +22,19 @@ private:
     struct {
         VkPhysicalDevice physicalDevice;
         VkDevice logicalDevice;
-    } MainDevice;
+    } coreDevice;
+    
+    VkQueue graphicsQueue;
     
     void createInstance();
+    void createLogicalDevice();
+    
     void getPhysicalDevice();
+    
+    // Support Functions
     bool checkInstanceExtensionSupport(std::vector<const char*>& checkExtensions);
+    bool checkDeviceSuitable(VkPhysicalDevice device);
+    
+    QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
 };
 

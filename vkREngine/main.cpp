@@ -3,7 +3,7 @@
 
 
 int main(int argc, const char * argv[]) {
-    VulkanRenderer renderer;
+    VulkanRenderer renderer{};
     Window window{};
     
     try {
