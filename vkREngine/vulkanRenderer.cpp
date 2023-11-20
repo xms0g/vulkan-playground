@@ -35,26 +35,34 @@ void VulkanRenderer::createInstance() {
         VK_API_VERSION_1_3          // The vulkan version
     };
     
+    const std::vector<const char*> validationLayers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+#ifndef NDEBUG
+    if (!checkValidationLayerSupport(validationLayers)) {
+        throw std::runtime_error("Validation layers requested, but not available!");
+    }
+#endif
+    
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
     
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     if (glfwExtensions == nullptr) {
-        throw std::runtime_error("Failed to get Instance Extensions");
+        throw std::runtime_error("Failed to get Instance Extensions!");
     }
     
     std::vector<const char*> requiredExtensions;
     for(uint32_t i = 0; i < glfwExtensionCount; i++) {
         requiredExtensions.emplace_back(glfwExtensions[i]);
     }
-    
 #ifdef __APPLE__
     requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
     
     // Check instance extensions supported
     if (!checkInstanceExtensionSupport(requiredExtensions)) {
-        throw std::runtime_error("VkInstance does not support required extensions");
+        throw std::runtime_error("VkInstance does not support required extensions!");
     }
     
     VkInstanceCreateInfo createInfo = {
@@ -66,14 +74,19 @@ void VulkanRenderer::createInstance() {
         0
 #endif
         &appInfo,                                           //pApplicationInfo
-        0,                                                  //enabledLayerCount
-        nullptr,                                            //ppEnabledLayerNames
+#ifndef NDEBUG
+        static_cast<uint32_t>(validationLayers.size()),     //enabledLayerCount
+        validationLayers.data(),                            //ppEnabledLayerNames
+#else
+        0,
+        nullptr,
+#endif
         static_cast<uint32_t>(requiredExtensions.size()),   //enabledExtensionCount
         requiredExtensions.data()                           //ppEnabledExtensionNames
     };
     
     if(vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create Vulkan Instance");
+        throw std::runtime_error("Failed to create Vulkan Instance!");
         
     }
 }
@@ -106,7 +119,7 @@ void VulkanRenderer::createLogicalDevice() {
     };
     
     if (vkCreateDevice(coreDevice.physicalDevice, &deviceCreateInfo, nullptr, &coreDevice.logicalDevice) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create a Logical Device");
+        throw std::runtime_error("Failed to create a Logical Device!");
     }
     
     // Handle queues created
@@ -119,7 +132,7 @@ void VulkanRenderer::getPhysicalDevice() {
     vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
     
     if (deviceCount == 0) {
-        throw std::runtime_error("Cannot find GPU that supports Vulkan instance");
+        throw std::runtime_error("Cannot find GPU that supports Vulkan Instance!");
     }
     
     // Get the list of the physical device
@@ -134,47 +147,7 @@ void VulkanRenderer::getPhysicalDevice() {
     }
 }
 
-bool VulkanRenderer::checkInstanceExtensionSupport(std::vector<const char *>& checkExtensions) {
-    // Get the number of extensions
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    
-    // Get the list of avaliable extension
-    std::vector<VkExtensionProperties> extentions{extensionCount};
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extentions.data());
-    
-    for (const auto& checkExtension : checkExtensions) {
-        bool hasExtension = false;
-        for (const auto& extension : extentions) {
-            if (std::strcmp(checkExtension, extension.extensionName)) {
-                hasExtension = true;
-                break;
-            }
-        }
-        
-        if (!hasExtension) {
-            return false;
-        }
-    }
-    
-    return true;
-}
-
-bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
-    // Information about the device(ID, name, type, vendor, etc)
-//    VkPhysicalDeviceProperties deviceProperties;
-//    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-//    
-//    // Information about what the device can do(geo shader, tess shader, etc)
-//    VkPhysicalDeviceFeatures deviceFeatures;
-//    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-    
-    QueueFamilyIndices indices = getQueueFamilies(device);
-    
-    return indices.isValid();
-}
-
-QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) { 
+QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
     
     uint32_t queueFamilyCount = 0;
@@ -196,6 +169,71 @@ QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
     }
     
     return indices;
+}
+
+bool VulkanRenderer::checkInstanceExtensionSupport(const std::vector<const char *>& checkExtensions) {
+    // Get the number of extensions
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    
+    // Get the list of avaliable extension
+    std::vector<VkExtensionProperties> extentions{extensionCount};
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extentions.data());
+    
+    for (const auto& checkExtension : checkExtensions) {
+        bool hasExtension = false;
+        for (const auto& extension : extentions) {
+            if (std::strcmp(checkExtension, extension.extensionName) == 0) {
+                hasExtension = true;
+                break;
+            }
+        }
+        
+        if (!hasExtension) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+bool VulkanRenderer::checkValidationLayerSupport(const std::vector<const char *>& checkLayers) {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    
+    for (const auto& checkLayer : checkLayers) {
+        bool hasLayer = false;
+        for (const auto& layer : availableLayers) {
+            if (std::strcmp(checkLayer, layer.layerName) == 0) {
+                hasLayer = true;
+                break;
+            }
+        }
+        
+        if (!hasLayer) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+
+bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
+    // Information about the device(ID, name, type, vendor, etc)
+//    VkPhysicalDeviceProperties deviceProperties;
+//    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+//    
+//    // Information about what the device can do(geo shader, tess shader, etc)
+//    VkPhysicalDeviceFeatures deviceFeatures;
+//    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    
+    QueueFamilyIndices indices = getQueueFamilies(device);
+    
+    return indices.isValid();
 }
 
 

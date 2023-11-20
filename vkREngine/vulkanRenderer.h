@@ -33,7 +33,8 @@ private:
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
     
     // Support Functions
-    bool checkInstanceExtensionSupport(std::vector<const char*>& checkExtensions);
+    bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
+    bool checkValidationLayerSupport(const std::vector<const char*>& checkLayers);
     bool checkDeviceSuitable(VkPhysicalDevice device);
 };
 
