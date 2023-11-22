@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <iostream>
+#include "window.h"
 #include "utilities.hpp"
 #include "vulkanValidation.hpp"
 
@@ -14,10 +15,10 @@ public:
     VulkanRenderer() = default;
     ~VulkanRenderer();
     
-    int init(GLFWwindow* window);
+    int init(Window* window);
     
 private:
-    GLFWwindow* m_window;
+    Window* m_window;
     
     // Vulkan components
     VkInstance m_instance;

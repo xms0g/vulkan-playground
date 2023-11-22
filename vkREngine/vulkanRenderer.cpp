@@ -8,7 +8,7 @@ VulkanRenderer::~VulkanRenderer() {
     vkDestroyInstance(m_instance, nullptr);
 }
 
-int VulkanRenderer::init(GLFWwindow* window) {
+int VulkanRenderer::init(Window* window) {
     m_window = window;
     
     try {
@@ -134,7 +134,7 @@ void VulkanRenderer::createLogicalDevice() {
 }
 
 void VulkanRenderer::createSurface() {
-    if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(m_instance, m_window->nativeHandle(), nullptr, &m_surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create a surface!");
     }
     
