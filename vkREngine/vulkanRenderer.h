@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <iostream>
+#include <algorithm>
 #include "window.h"
 #include "utilities.hpp"
 #include "vulkanValidation.hpp"
@@ -30,6 +31,7 @@ private:
     VkQueue m_graphicsQueue;
     VkQueue m_presentationQueue;
     VkSurfaceKHR m_surface;
+    VkSwapchainKHR m_swapchain;
     
     void createInstance();
     void createLogicalDevice();
@@ -48,5 +50,7 @@ private:
     bool checkDeviceSuitable(VkPhysicalDevice device);
     
     VkSurfaceFormatKHR chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
+    VkPresentModeKHR chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
 };
 
