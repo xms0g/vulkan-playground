@@ -20,7 +20,7 @@ int VulkanRenderer::init(Window* window) {
         createSurface();
         getPhysicalDevice();
         createLogicalDevice();
-        createSwapChain();
+        createSwapchain();
         
     } catch (const std::runtime_error& e) {
         throw std::runtime_error(e.what());
@@ -144,7 +144,7 @@ void VulkanRenderer::createSurface() {
     }
 }
 
-void VulkanRenderer::createSwapChain() {
+void VulkanRenderer::createSwapchain() {
     SwapchainDetails swapChainDetails = getSwapChainDetails(coreDevice.physicalDevice);
     
     // Find optimal surface values for our swap chain

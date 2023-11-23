@@ -41,7 +41,7 @@ private:
     void createInstance();
     void createLogicalDevice();
     void createSurface();
-    void createSwapChain();
+    void createSwapchain();
     
     // Getters
     void getPhysicalDevice();
