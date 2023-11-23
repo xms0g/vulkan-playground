@@ -14,6 +14,8 @@ public:
     void swapBuffer() override;
     
     void updateFpsCounter(float dt);
+    
+    bool shouldClose();
 
 private:
     void initImpl(const char* title, int width, int height, bool fullscreen) override;

@@ -4,6 +4,8 @@
 int main(int argc, const char * argv[]) {
     VulkanRenderer renderer{};
     Window window{};
+    float deltaTime{};
+    uint32_t millisecsPreviousFrame{0};
     
     try {
         window.init("vkREngine");
@@ -13,8 +15,12 @@ int main(int argc, const char * argv[]) {
         return EXIT_FAILURE;
     }
    
-    while(!glfwWindowShouldClose(window.nativeHandle())) {
-           glfwPollEvents();
+    while(!window.shouldClose()) {
+        deltaTime = (glfwGetTime() - millisecsPreviousFrame) / 1000.0f;
+        millisecsPreviousFrame = glfwGetTime();
+        //window.updateFpsCounter(deltaTime);
+        
+        glfwPollEvents();
     }
     
     return 0;
