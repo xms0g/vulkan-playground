@@ -16,11 +16,13 @@ int main(int argc, const char * argv[]) {
     }
    
     while(!window.shouldClose()) {
+        glfwPollEvents();
+        
         deltaTime = (glfwGetTime() - millisecsPreviousFrame) / 1000.0f;
         millisecsPreviousFrame = glfwGetTime();
         //window.updateFpsCounter(deltaTime);
         
-        glfwPollEvents();
+        window.swapBuffer();
     }
     
     return 0;
