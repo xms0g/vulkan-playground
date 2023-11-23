@@ -32,6 +32,11 @@ private:
     VkQueue m_presentationQueue;
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapchain;
+    std::vector<SwapchainImage> m_swapchainImages;
+    
+    // Utility
+    VkFormat swapchainImageFormat;
+    VkExtent2D swapchainExtent;
     
     void createInstance();
     void createLogicalDevice();
@@ -41,7 +46,7 @@ private:
     // Getters
     void getPhysicalDevice();
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
-    SwapChainDetails getSwapChainDetails(VkPhysicalDevice device);
+    SwapchainDetails getSwapChainDetails(VkPhysicalDevice device);
     
     // Support Functions
     bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
@@ -52,5 +57,7 @@ private:
     VkSurfaceFormatKHR chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
     VkPresentModeKHR chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
+    
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 };
 

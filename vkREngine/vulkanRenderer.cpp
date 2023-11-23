@@ -3,6 +3,9 @@
 
 
 VulkanRenderer::~VulkanRenderer() {
+    for (auto image : m_swapchainImages) {
+        vkDestroyImageView(coreDevice.logicalDevice, image.imageView, nullptr);
+    }
     vkDestroySwapchainKHR(coreDevice.logicalDevice, m_swapchain, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyDevice(coreDevice.logicalDevice, nullptr);
@@ -142,12 +145,12 @@ void VulkanRenderer::createSurface() {
 }
 
 void VulkanRenderer::createSwapChain() {
-    SwapChainDetails swapChainDetails = getSwapChainDetails(coreDevice.physicalDevice);
+    SwapchainDetails swapChainDetails = getSwapChainDetails(coreDevice.physicalDevice);
     
     // Find optimal surface values for our swap chain
     VkSurfaceFormatKHR surfaceFormat = chooseBestSurfaceFormat(swapChainDetails.surfaceFormats);
     VkPresentModeKHR presentationMode = chooseBestPresentationMode(swapChainDetails.presentModes);
-    VkExtent2D chainImageResolution = chooseSwapExtent(swapChainDetails.surfaceCapabilities);
+    VkExtent2D extent = chooseSwapExtent(swapChainDetails.surfaceCapabilities);
     
     // Get 1 more than the min to allow triple buffering
     uint32_t imageCount =  swapChainDetails.surfaceCapabilities.minImageCount + 1;
@@ -163,7 +166,7 @@ void VulkanRenderer::createSwapChain() {
     swapChainCreateInfo.imageFormat = surfaceFormat.format;                                     // Swapchain format
     swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;                             // Swapchain color space
     swapChainCreateInfo.presentMode = presentationMode;                                         // Swapchain presentation mode
-    swapChainCreateInfo.imageExtent = chainImageResolution;                                     // Swapchain image extent
+    swapChainCreateInfo.imageExtent = extent;                                                   // Swapchain image extent
     swapChainCreateInfo.minImageCount = imageCount;                                             // Minumum images in swapchain
     swapChainCreateInfo.imageArrayLayers = 1;                                                   // Numbers of layers for each image in chain
     swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;                       // What attackemnt images will be used as
@@ -195,6 +198,26 @@ void VulkanRenderer::createSwapChain() {
     if (vkCreateSwapchainKHR(coreDevice.logicalDevice, &swapChainCreateInfo, nullptr, &m_swapchain) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create a swapchain!");
     }
+    // Store for later
+    swapchainImageFormat = surfaceFormat.format;
+    swapchainExtent = extent;
+    
+    // Get swapchain Imgaes
+    uint32_t swapchainImageCount = 0;
+    vkGetSwapchainImagesKHR(coreDevice.logicalDevice, m_swapchain, &swapchainImageCount, nullptr);
+    
+    std::vector<VkImage> swapchainImages{swapchainImageCount};
+    vkGetSwapchainImagesKHR(coreDevice.logicalDevice, m_swapchain, &swapchainImageCount, swapchainImages.data());
+    
+    for (VkImage image : swapchainImages) {
+        SwapchainImage swImage = {};
+        swImage.image = image;
+        swImage.imageView = createImageView(image, swapchainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+        
+        m_swapchainImages.push_back(swImage);
+        
+    }
+
 }
 
 void VulkanRenderer::getPhysicalDevice() {
@@ -248,8 +271,8 @@ QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
     return indices;
 }
 
-SwapChainDetails VulkanRenderer::getSwapChainDetails(VkPhysicalDevice device) {
-    SwapChainDetails swapChainDetails;
+SwapchainDetails VulkanRenderer::getSwapChainDetails(VkPhysicalDevice device) {
+    SwapchainDetails swapChainDetails;
     // Get the surface capabilities for the given surface on the given physical device
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &swapChainDetails.surfaceCapabilities);
     
@@ -369,7 +392,7 @@ bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
     
     bool swapChainValid = false;
     if (extensionSupported) {
-        SwapChainDetails details = getSwapChainDetails(device);
+        SwapchainDetails details = getSwapChainDetails(device);
         swapChainValid = !details.surfaceFormats.empty() && !details.presentModes.empty();
     }
     
@@ -415,6 +438,32 @@ VkExtent2D VulkanRenderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surf
     
     return newExtent;
 }
+
+VkImageView VulkanRenderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) { 
+    VkImageViewCreateInfo viewCreateInfo = {};
+    viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewCreateInfo.image = image;                                       // Image to create view for
+    viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;                    // Type of image
+    viewCreateInfo.format = format;                                     // Format of image data
+    viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;        // Allows remapping of rgba components to other rgba values
+    viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    // Subresources allow the view to view only a part of image
+    viewCreateInfo.subresourceRange.aspectMask = aspectFlags;           // Which aspect of image to view(e.g COLOR_BIT )
+    viewCreateInfo.subresourceRange.baseMipLevel = 0;                   // Start mipmap level to view from
+    viewCreateInfo.subresourceRange.levelCount = 1;                     // Number of mip level to view
+    viewCreateInfo.subresourceRange.baseArrayLayer = 0;                 // Start array level to view from
+    viewCreateInfo.subresourceRange.layerCount = 1;                     // Number of array levels to view
+    
+    VkImageView imageView;
+    if (vkCreateImageView(coreDevice.logicalDevice, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create an Image View!");
+    }
+    
+    return imageView;
+}
+
 
 
 
