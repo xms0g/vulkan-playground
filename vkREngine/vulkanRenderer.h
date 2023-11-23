@@ -34,7 +34,9 @@ private:
     void createInstance();
     void createLogicalDevice();
     void createSurface();
+    void createSwapChain();
     
+    // Getters
     void getPhysicalDevice();
     QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
     SwapChainDetails getSwapChainDetails(VkPhysicalDevice device);
@@ -44,5 +46,7 @@ private:
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     bool checkValidationLayerSupport(const std::vector<const char*>& checkValidationLayers);
     bool checkDeviceSuitable(VkPhysicalDevice device);
+    
+    VkSurfaceFormatKHR chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
 };
 

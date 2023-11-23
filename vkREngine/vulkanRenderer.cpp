@@ -16,6 +16,7 @@ int VulkanRenderer::init(Window* window) {
         createSurface();
         getPhysicalDevice();
         createLogicalDevice();
+        createSwapChain();
         
     } catch (const std::runtime_error& e) {
         throw std::runtime_error(e.what());
@@ -137,6 +138,11 @@ void VulkanRenderer::createSurface() {
     if (glfwCreateWindowSurface(m_instance, m_window->nativeHandle(), nullptr, &m_surface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create a surface!");
     }
+}
+
+void VulkanRenderer::createSwapChain() {
+    SwapChainDetails swapChainDetails = getSwapChainDetails(coreDevice.physicalDevice);
+    
     
 }
 
@@ -318,6 +324,22 @@ bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
     
     return indices.isValid() && extensionSupported && swapChainValid;
 }
+
+VkSurfaceFormatKHR VulkanRenderer::chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &formats) { 
+    if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
+        return {VK_FORMAT_R8G8B8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    }
+    
+    for (const auto& format : formats) {
+        if ((format.format == VK_FORMAT_R8G8B8_UNORM || format.format == VK_FORMAT_B8G8R8_UNORM) &&
+            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            return format;
+        }
+    }
+    
+    return formats[0];
+}
+
 
 
 
