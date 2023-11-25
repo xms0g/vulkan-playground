@@ -7,16 +7,16 @@ Window::~Window() {
     glfwTerminate();
 }
 
-void Window::initImpl(const char *title, int width, int height, bool fullscreen) {
+void Window::initImpl(const char* title, int width, int height, bool fullscreen) {
     m_title = title;
-    
+
     if (glfwInit() != GLFW_TRUE) {
         throw std::runtime_error("Failed to initialize Window");
     }
-    
+
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    
+
     m_window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 }
 

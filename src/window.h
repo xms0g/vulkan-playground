@@ -8,13 +8,13 @@
 class Window : public IWindow<GLFWwindow> {
 public:
     Window() = default;
-    
+
     ~Window() override;
-    
+
     void swapBuffer() override;
-    
+
     void updateFpsCounter(float dt);
-    
+
     bool shouldClose();
 
 private:
