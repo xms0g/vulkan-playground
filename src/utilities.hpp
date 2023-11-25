@@ -26,10 +26,22 @@ struct SwapchainImage {
     VkImageView imageView;
 };
 
-static std::vector<char> readFile(const std::string& filename) {
-    std::ifstream file{filename, std::ios::binary | std::ios::ate};
-    
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open a file!");
+
+static std::vector<char> readFile(const std::string& fileName) {
+    std::ifstream file{fileName, std::ios::binary | std::ios::ate};
+
+    if (!file.is_open()){
+        throw std::runtime_error("Failed to read file: " + fileName);
     }
+
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> fileBuffer(fileSize);
+
+    file.seekg(0);
+
+    file.read(fileBuffer.data(), fileSize);
+
+    file.close();
+
+    return fileBuffer;
 }

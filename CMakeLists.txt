@@ -13,7 +13,12 @@ if (Vulkan_FOUND)
     include_directories(${Vulkan_INCLUDE_DIRS})
 endif (Vulkan_FOUND)
 
-file(GLOB_RECURSE SRC "src/*")
+set(FILESYSTEM
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/filesystem/filesystem.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/filesystem/filesystem.h)
 
-add_executable(${PROJECT_NAME} ${SRC})
+file(GLOB_RECURSE SRC "src/*")
+set(COMPILATION_UNIT ${SRC} ${FILESYSTEM})
+
+add_executable(${PROJECT_NAME} ${COMPILATION_UNIT})
 target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
