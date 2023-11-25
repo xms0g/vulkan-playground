@@ -10,6 +10,7 @@
 #include <algorithm>
 #include "window.h"
 #include "utilities.hpp"
+#include "../libs/filesystem/filesystem.h"
 #include "vulkanValidation.hpp"
 
 class VulkanRenderer {
@@ -21,24 +22,24 @@ public:
     int init(Window* window);
 
 private:
-    Window* m_window;
+    Window* m_window{};
 
     // Vulkan components
-    VkInstance m_instance;
+    VkInstance m_instance{};
     struct {
         VkPhysicalDevice physicalDevice;
         VkDevice logicalDevice;
-    } coreDevice;
+    } coreDevice{};
 
-    VkQueue m_graphicsQueue;
-    VkQueue m_presentationQueue;
-    VkSurfaceKHR m_surface;
-    VkSwapchainKHR m_swapchain;
+    VkQueue m_graphicsQueue{};
+    VkQueue m_presentationQueue{};
+    VkSurfaceKHR m_surface{};
+    VkSwapchainKHR m_swapchain{};
     std::vector<SwapchainImage> m_swapchainImages;
 
     // Utility
     VkFormat swapchainImageFormat;
-    VkExtent2D swapchainExtent;
+    VkExtent2D swapchainExtent{};
 
     void createInstance();
 
@@ -47,6 +48,8 @@ private:
     void createSurface();
 
     void createSwapchain();
+
+    void createGraphicsPipeline();
 
     // Getters
     void getPhysicalDevice();
@@ -71,5 +74,7 @@ private:
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
+    VkShaderModule createShaderModule(const std::vector<char>& code);
 };
 
