@@ -100,7 +100,7 @@ void VulkanRenderer::createLogicalDevice() {
     
     // Queues the logical device needs to create
     for (const auto& queueFamilyIndex : queueFamilyIndices) {
-        float priority = 1.0f; // Vulkan needs to know how to handle multiple multiple queues. [1] is high priority.
+        float priority = 1.0f; // Vulkan needs to know how to handle multiple queues. [1] is high priority.
         VkDeviceQueueCreateInfo queueCreateInfo = {
             VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,     //sType
             nullptr,                                        //pNext
