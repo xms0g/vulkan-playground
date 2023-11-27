@@ -225,8 +225,8 @@ void VulkanRenderer::createSwapchain() {
 
 void VulkanRenderer::createGraphicsPipeline() {
     // Read in SPIR-V code od shaders
-    auto vertexShaderCode = readFile(Filesystem::path("shaders/vert.spv"));
-    auto fragmentShaderCode = readFile(Filesystem::path("shaders/frag.spv"));
+    auto vertexShaderCode = Filesystem::readFile(Filesystem::path("shaders/vert.spv"));
+    auto fragmentShaderCode = Filesystem::readFile(Filesystem::path("shaders/frag.spv"));
 
     // Create shader modules
     VkShaderModule vertexShaderModule = createShaderModule(vertexShaderCode);

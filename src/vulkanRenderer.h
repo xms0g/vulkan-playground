@@ -10,8 +10,8 @@
 #include <algorithm>
 #include "window.h"
 #include "utilities.hpp"
-#include "../libs/filesystem/filesystem.h"
 #include "vulkanValidation.hpp"
+#include "../libs/filesystem/filesystem.h"
 
 class VulkanRenderer {
 public:
