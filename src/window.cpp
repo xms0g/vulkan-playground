@@ -1,6 +1,4 @@
 #include "window.h"
-#include <iostream>
-
 
 Window::~Window() {
     glfwDestroyWindow(m_window);
