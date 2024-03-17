@@ -1,5 +1,12 @@
 #include "vulkanRenderer.h"
 #include <cstring>
+#include <set>
+#include <algorithm>
+#include <stdexcept>
+#include "window.h"
+#include "utilities.hpp"
+#include "vulkanValidation.hpp"
+#include "../libs/filesystem/filesystem.h"
 
 
 VulkanRenderer::~VulkanRenderer() {
@@ -217,14 +224,12 @@ void VulkanRenderer::createSwapchain() {
         swImage.imageView = createImageView(image, swapchainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
         m_swapchainImages.push_back(swImage);
-
     }
-
 }
 
 
 void VulkanRenderer::createGraphicsPipeline() {
-    // Read in SPIR-V code od shaders
+    // Read in SPIR-V code of shaders
     auto vertexShaderCode = Filesystem::readFile(Filesystem::path("shaders/vert.spv"));
     auto fragmentShaderCode = Filesystem::readFile(Filesystem::path("shaders/frag.spv"));
 
@@ -246,9 +251,23 @@ void VulkanRenderer::createGraphicsPipeline() {
     fragmenShaderCreateInfo.module = fragmentShaderModule;           // Shader module to be used
     fragmenShaderCreateInfo.pName = "main";                          // Entry point in the shader
 
+    // Put shader stage creation info into array
     VkPipelineShaderStageCreateInfo shaderStages[2] = {vertexShaderCreateInfo, fragmenShaderCreateInfo};
-    // Create Pipeline
 
+    // Vertex Input TODO:Put in vertex descriptions when resources created
+    VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
+    vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr; // List of vertex bindings descriptions
+    vertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr; // List of vertex attribute descriptions
+
+    // Input Assembly
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
+    inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Primitive type to assemble vertices as
+    inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
+    
     // Destroy shader modules, no longer needed
     vkDestroyShaderModule(coreDevice.logicalDevice, fragmentShaderModule, nullptr);
     vkDestroyShaderModule(coreDevice.logicalDevice, vertexShaderModule, nullptr);

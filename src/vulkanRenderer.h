@@ -1,18 +1,12 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-
 #include <GLFW/glfw3.h>
-#include <stdexcept>
 #include <vector>
-#include <set>
-#include <iostream>
-#include <algorithm>
-#include "window.h"
-#include "utilities.hpp"
-#include "vulkanValidation.hpp"
-#include "../libs/filesystem/filesystem.h"
+#include "swapChain.hpp"
+#include "queueFamily.hpp"
 
+class Window;
 class VulkanRenderer {
 public:
     VulkanRenderer() = default;
@@ -22,25 +16,6 @@ public:
     int init(Window* window);
 
 private:
-    Window* m_window{};
-
-    // Vulkan components
-    VkInstance m_instance{};
-    struct {
-        VkPhysicalDevice physicalDevice;
-        VkDevice logicalDevice;
-    } coreDevice{};
-
-    VkQueue m_graphicsQueue{};
-    VkQueue m_presentationQueue{};
-    VkSurfaceKHR m_surface{};
-    VkSwapchainKHR m_swapchain{};
-    std::vector<SwapchainImage> m_swapchainImages;
-
-    // Utility
-    VkFormat swapchainImageFormat;
-    VkExtent2D swapchainExtent{};
-
     void createInstance();
 
     void createLogicalDevice();
@@ -76,5 +51,24 @@ private:
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
+
+    Window* m_window{};
+
+    // Vulkan components
+    VkInstance m_instance{};
+    struct {
+        VkPhysicalDevice physicalDevice;
+        VkDevice logicalDevice;
+    } coreDevice{};
+
+    VkQueue m_graphicsQueue{};
+    VkQueue m_presentationQueue{};
+    VkSurfaceKHR m_surface{};
+    VkSwapchainKHR m_swapchain{};
+    std::vector<SwapchainImage> m_swapchainImages{};
+
+    // Utility
+    VkFormat swapchainImageFormat{};
+    VkExtent2D swapchainExtent{};
 };
 
