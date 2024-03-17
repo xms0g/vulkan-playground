@@ -3,10 +3,10 @@
 #include <set>
 #include <algorithm>
 #include <stdexcept>
-#include "window.h"
 #include "deviceExtension.hpp"
 #include "vulkanValidation.hpp"
-#include "../libs/filesystem/filesystem.h"
+#include "../core/window.h"
+#include "../../libs/filesystem/filesystem.h"
 
 
 VulkanRenderer::~VulkanRenderer() {
