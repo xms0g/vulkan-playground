@@ -3,7 +3,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vector>
-#include "swapChain.hpp"
+#include "swapchain.hpp"
 #include "queueFamily.hpp"
 
 class Window;

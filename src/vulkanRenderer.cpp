@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include "window.h"
-#include "utilities.hpp"
+#include "deviceExtension.hpp"
 #include "vulkanValidation.hpp"
 #include "../libs/filesystem/filesystem.h"
 
