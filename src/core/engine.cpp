@@ -1,6 +1,6 @@
 #include "engine.h"
-#include "../renderer/vulkanRenderer.h"
 #include "window.h"
+#include "../renderer/vulkanRenderer.h"
 
 Engine::Engine() :
         window(std::make_unique<Window>()),
