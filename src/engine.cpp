@@ -1,4 +1,6 @@
 #include "engine.h"
+#include "vulkanRenderer.h"
+#include "window.h"
 
 Engine::Engine() :
         window(std::make_unique<Window>()),
@@ -10,6 +12,8 @@ Engine::Engine() :
         throw std::runtime_error(e.what());
     }
 }
+
+Engine::~Engine() = default;
 
 void Engine::run() {
     while (!window->shouldClose()) {

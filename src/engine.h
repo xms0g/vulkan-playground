@@ -1,12 +1,14 @@
 #pragma once
 
 #include <memory>
-#include "vulkanRenderer.h"
-#include "window.h"
 
+class VulkanRenderer;
+class Window;
 class Engine {
 public:
     Engine();
+
+    ~Engine();
 
     void run();
 
