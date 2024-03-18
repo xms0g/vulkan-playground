@@ -3,6 +3,7 @@
 #include <set>
 #include <algorithm>
 #include <stdexcept>
+#include <GLFW/glfw3.h>
 #include "deviceExtension.hpp"
 #include "vulkanValidation.hpp"
 #include "../core/window.h"
@@ -122,7 +123,7 @@ void VulkanRenderer::createLogicalDevice() {
     }
 
 
-    VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
+    VkPhysicalDeviceFeatures physicalDeviceFeatures{};
     VkDeviceCreateInfo deviceCreateInfo = {
             VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,               //sType
             nullptr,                                            //pNext
@@ -169,7 +170,7 @@ void VulkanRenderer::createSwapchain() {
         imageCount = swapChainDetails.surfaceCapabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
+    VkSwapchainCreateInfoKHR swapChainCreateInfo{};
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapChainCreateInfo.surface = m_surface;                                                    // Swapchain surface
     swapChainCreateInfo.imageFormat = surfaceFormat.format;                                     // Swapchain format
@@ -219,7 +220,7 @@ void VulkanRenderer::createSwapchain() {
     vkGetSwapchainImagesKHR(coreDevice.logicalDevice, m_swapchain, &swapchainImageCount, swapchainImages.data());
 
     for (VkImage image: swapchainImages) {
-        SwapchainImage swImage = {};
+        SwapchainImage swImage{};
         swImage.image = image;
         swImage.imageView = createImageView(image, swapchainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -238,14 +239,14 @@ void VulkanRenderer::createGraphicsPipeline() {
     VkShaderModule fragmentShaderModule = createShaderModule(fragmentShaderCode);
 
     // Vertex Stage Creation Information
-    VkPipelineShaderStageCreateInfo vertexShaderCreateInfo = {};
+    VkPipelineShaderStageCreateInfo vertexShaderCreateInfo{};
     vertexShaderCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertexShaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;      // Shader stage name
     vertexShaderCreateInfo.module = vertexShaderModule;             // Shader module to be used
     vertexShaderCreateInfo.pName = "main";                          // Entry point in the shader
 
     // Fragment Stage Creation Information
-    VkPipelineShaderStageCreateInfo fragmenShaderCreateInfo = {};
+    VkPipelineShaderStageCreateInfo fragmenShaderCreateInfo{};
     fragmenShaderCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragmenShaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;    // Shader stage name
     fragmenShaderCreateInfo.module = fragmentShaderModule;           // Shader module to be used
@@ -255,7 +256,7 @@ void VulkanRenderer::createGraphicsPipeline() {
     VkPipelineShaderStageCreateInfo shaderStages[2] = {vertexShaderCreateInfo, fragmenShaderCreateInfo};
 
     // Vertex Input TODO:Put in vertex descriptions when resources created
-    VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
+    VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo{};
     vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
     vertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr; // List of vertex bindings descriptions
@@ -263,12 +264,13 @@ void VulkanRenderer::createGraphicsPipeline() {
     vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr; // List of vertex attribute descriptions
 
     // Input Assembly
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo{};
     inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Primitive type to assemble vertices as
     inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
     //  Viewport and Scissor
+    VkViewport viewport{};
 
     
     // Destroy shader modules, no longer needed
@@ -501,7 +503,7 @@ VkExtent2D VulkanRenderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surf
 }
 
 VkImageView VulkanRenderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-    VkImageViewCreateInfo viewCreateInfo = {};
+    VkImageViewCreateInfo viewCreateInfo{};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewCreateInfo.image = image;                                       // Image to create view for
     viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;                    // Type of image
@@ -526,7 +528,7 @@ VkImageView VulkanRenderer::createImageView(VkImage image, VkFormat format, VkIm
 }
 
 VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code) {
-    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
+    VkShaderModuleCreateInfo shaderModuleCreateInfo{};
     shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shaderModuleCreateInfo.codeSize = code.size();
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());

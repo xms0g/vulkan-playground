@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+#include <vulkan/vulkan.h>
+
 struct SwapchainDetails {
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     std::vector<VkSurfaceFormatKHR> surfaceFormats;

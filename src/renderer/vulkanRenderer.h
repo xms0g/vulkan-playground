@@ -1,8 +1,5 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <vector>
 #include "swapchain.hpp"
 #include "queueFamily.hpp"
 
@@ -57,8 +54,8 @@ private:
     // Vulkan components
     VkInstance m_instance{};
     struct {
-        VkPhysicalDevice physicalDevice;
-        VkDevice logicalDevice;
+        VkPhysicalDevice physicalDevice{};
+        VkDevice logicalDevice{};
     } coreDevice{};
 
     VkQueue m_graphicsQueue{};
