@@ -2,13 +2,13 @@
 #include <filesystem>
 #include <fstream>
 
-std::string Filesystem::path(const char* p) {
+std::string fs::path(const char* p) {
     auto cwd = std::filesystem::current_path().string();
     cwd.erase(cwd.find_last_of('/'));
     return cwd + "/" + p;
 }
 
-std::vector<char> Filesystem::readFile(const std::string& fileName) {
+std::vector<char> fs::readFile(const std::string& fileName) {
     std::ifstream file{fileName, std::ios::binary | std::ios::ate};
 
     if (!file.is_open()) {

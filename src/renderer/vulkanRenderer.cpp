@@ -230,8 +230,8 @@ void VulkanRenderer::createSwapchain() {
 
 void VulkanRenderer::createGraphicsPipeline() {
     // Read in SPIR-V code of shaders
-    auto vertexShaderCode = Filesystem::readFile(Filesystem::path("shaders/vert.spv"));
-    auto fragmentShaderCode = Filesystem::readFile(Filesystem::path("shaders/frag.spv"));
+    auto vertexShaderCode = fs::readFile(fs::path("shaders/vert.spv"));
+    auto fragmentShaderCode = fs::readFile(fs::path("shaders/frag.spv"));
 
     // Create shader modules
     VkShaderModule vertexShaderModule = createShaderModule(vertexShaderCode);
@@ -267,6 +267,9 @@ void VulkanRenderer::createGraphicsPipeline() {
     inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Primitive type to assemble vertices as
     inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+    //  Viewport and Scissor
+
     
     // Destroy shader modules, no longer needed
     vkDestroyShaderModule(coreDevice.logicalDevice, fragmentShaderModule, nullptr);
