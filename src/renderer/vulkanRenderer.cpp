@@ -271,8 +271,37 @@ void VulkanRenderer::createGraphicsPipeline() {
 
     //  Viewport and Scissor
     VkViewport viewport{};
+    viewport.x = 0.0f;                                      // x start coordinate
+    viewport.y = 0.0f;                                      // y start coordinate
+    viewport.width = (float) swapchainExtent.width;         // width of viewport
+    viewport.height = (float) swapchainExtent.height;       // height of viewport
+    viewport.minDepth = 0.0f;                               // min framebuffer depth
+    viewport.maxDepth = 1.0f;                               // max framebuffer depth
 
-    
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};                                // Offset to use region from
+    scissor.extent = swapchainExtent;                       // Extent to describe region to use, starting at offset
+
+    VkPipelineViewportStateCreateInfo viewportStateCreateInfo{};
+    viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateCreateInfo.viewportCount = 1;
+    viewportStateCreateInfo.pViewports = &viewport;
+    viewportStateCreateInfo.scissorCount = 1;
+    viewportStateCreateInfo.pScissors = &scissor;
+
+    // Dynamic States
+//    std::vector<VkDynamicState> dynamicStateEnables;
+//    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_VIEWPORT);   // Dynamic viewport: Can resize in command buffer with vkCmdSetViewport(commandbuffer, 0, 1, &viewport)
+//    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_SCISSOR);
+//
+//    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+//    dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+//    dynamicStateCreateInfo.dynamicStateCount = dynamicStateEnables.size();
+//    dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
+
+    // Rasterizer
+
+
     // Destroy shader modules, no longer needed
     vkDestroyShaderModule(coreDevice.logicalDevice, fragmentShaderModule, nullptr);
     vkDestroyShaderModule(coreDevice.logicalDevice, vertexShaderModule, nullptr);
