@@ -300,7 +300,15 @@ void VulkanRenderer::createGraphicsPipeline() {
 //    dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
 
     // Rasterizer
-
+    VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo{};
+    rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;           // Change if fragments beyond near/far plane are clipped or clamped to plane
+    rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE;    // Whether to discard data and skip rasterizer
+    rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;    // How to handle filling points between vertices
+    rasterizationStateCreateInfo.lineWidth = 1.0f;                      // How thick lines should be drawn
+    rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;      // Which face of tri to cull
+    rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;   // Winding to determine which side is front
+    rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;            // Whether to add depth bias to fragments
 
     // Destroy shader modules, no longer needed
     vkDestroyShaderModule(coreDevice.logicalDevice, fragmentShaderModule, nullptr);
