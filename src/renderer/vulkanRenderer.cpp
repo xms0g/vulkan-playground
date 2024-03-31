@@ -11,9 +11,12 @@
 
 
 VulkanRenderer::~VulkanRenderer() {
+    vkDestroyPipelineLayout(coreDevice.logicalDevice, pipelineLayout, nullptr);
+
     for (auto image: m_swapchainImages) {
         vkDestroyImageView(coreDevice.logicalDevice, image.imageView, nullptr);
     }
+
     vkDestroySwapchainKHR(coreDevice.logicalDevice, m_swapchain, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyDevice(coreDevice.logicalDevice, nullptr);
@@ -263,13 +266,13 @@ void VulkanRenderer::createGraphicsPipeline() {
     vertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
     vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr; // List of vertex attribute descriptions
 
-    // Input Assembly
+    // -- Input Assembly --
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo{};
     inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // Primitive type to assemble vertices as
     inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
-    //  Viewport and Scissor
+    // -- Viewport and Scissor --
     VkViewport viewport{};
     viewport.x = 0.0f;                                      // x start coordinate
     viewport.y = 0.0f;                                      // y start coordinate
@@ -289,7 +292,7 @@ void VulkanRenderer::createGraphicsPipeline() {
     viewportStateCreateInfo.scissorCount = 1;
     viewportStateCreateInfo.pScissors = &scissor;
 
-    // Dynamic States
+    // -- Dynamic States --
 //    std::vector<VkDynamicState> dynamicStateEnables;
 //    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_VIEWPORT);   // Dynamic viewport: Can resize in command buffer with vkCmdSetViewport(commandbuffer, 0, 1, &viewport)
 //    dynamicStateEnables.push_back(VK_DYNAMIC_STATE_SCISSOR);
@@ -299,7 +302,7 @@ void VulkanRenderer::createGraphicsPipeline() {
 //    dynamicStateCreateInfo.dynamicStateCount = dynamicStateEnables.size();
 //    dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
 
-    // Rasterizer
+    // -- Rasterizer --
     VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo{};
     rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;           // Change if fragments beyond near/far plane are clipped or clamped to plane
@@ -308,7 +311,57 @@ void VulkanRenderer::createGraphicsPipeline() {
     rasterizationStateCreateInfo.lineWidth = 1.0f;                      // How thick lines should be drawn
     rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;      // Which face of tri to cull
     rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;   // Winding to determine which side is front
-    rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;            // Whether to add depth bias to fragments
+    rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;            // Whether to add depth bias to fragments (good for stopping "shadow acne" in shadow mapping
+
+    // -- Multisampling --
+    VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo{};
+    multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampleStateCreateInfo.sampleShadingEnable = VK_FALSE;               // Enable multisample shading or not
+    multisampleStateCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // Number of samples to use per fragment
+
+    // -- Blending --
+    // Blending decides how to blend to a new color being written to a fragment, with the old value.
+
+    // Blend Attachment State (how blending is handled)
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState{};
+    colorBlendAttachmentState.colorWriteMask =      // Colors to apply blending to
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachmentState.blendEnable = VK_TRUE; // Enable blending
+
+    // Blending uses equation: (srcColorBlendFactor * new color) colorBlendOp(dstColorBlendFactor * old color)
+    colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+
+    // Summarised: (VK_BLEND_FACTOR_SRC_ALPHA * new color) + (VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA * old color)
+    //              (new color alpha * new color + 1 - new color alpha * old color)
+
+    colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+    // Summarised: (1 * new alpha + 0 * old alpha) = new alpha
+
+    VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo{};
+    colorBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendStateCreateInfo.logicOpEnable = VK_FALSE; // Alternative to calculations is to use logical operations
+    colorBlendStateCreateInfo.attachmentCount = 1;
+    colorBlendStateCreateInfo.pAttachments = &colorBlendAttachmentState;
+
+    // -- Pipeline Layout( TODO: Apply Future Descripto set Layouts) --
+    VkPipelineLayoutCreateInfo layoutCreateInfo{};
+    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutCreateInfo.setLayoutCount = 0;
+    layoutCreateInfo.pSetLayouts = nullptr;
+    layoutCreateInfo.pushConstantRangeCount = 0;
+    layoutCreateInfo.pPushConstantRanges = nullptr;
+
+    // Create Pipeline Layout
+    if (vkCreatePipelineLayout(coreDevice.logicalDevice, &layoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Pipeline Layout!");
+    }
+
+    // -- Depth Stencil Testing --
+    // TODO: Set up depth stencil testing
 
     // Destroy shader modules, no longer needed
     vkDestroyShaderModule(coreDevice.logicalDevice, fragmentShaderModule, nullptr);
