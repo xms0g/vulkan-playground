@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(vkREngine CXX C)
+project(abra CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 

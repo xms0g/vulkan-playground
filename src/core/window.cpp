@@ -45,7 +45,7 @@ void Window::updateFpsCounter(float dt) {
     m_frameCount++;
 }
 
-bool Window::shouldClose() {
+bool Window::shouldClose() const {
     return glfwWindowShouldClose(m_window);
 }
 

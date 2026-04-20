@@ -15,7 +15,7 @@ public:
 
     void updateFpsCounter(float dt);
 
-    bool shouldClose();
+    bool shouldClose() const;
 
 private:
     void initImpl(const char* title, int width, int height, bool fullscreen) override;

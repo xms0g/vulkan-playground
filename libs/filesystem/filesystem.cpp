@@ -19,9 +19,7 @@ std::vector<char> fs::readFile(const std::string& fileName) {
     std::vector<char> fileBuffer(fileSize);
 
     file.seekg(0);
-
     file.read(fileBuffer.data(), fileSize);
-
     file.close();
 
     return fileBuffer;

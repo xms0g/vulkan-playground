@@ -17,7 +17,6 @@ public:
         clearImpl(r, g, b, a);
     }
 
-
 protected:
     virtual void initImpl(const char* title, int width, int height, bool fullscreen) = 0;
 
@@ -25,5 +24,5 @@ protected:
 
     virtual void swapBuffer() = 0;
 
-    T* m_window;
+    T* m_window = nullptr;
 };

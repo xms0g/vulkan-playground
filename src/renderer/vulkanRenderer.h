@@ -1,4 +1,6 @@
 #pragma once
+#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
+#include <vulkan/vulkan_raii.hpp>
 
 #include "swapchain.hpp"
 #include "queueFamily.hpp"
@@ -20,6 +22,8 @@ private:
     void createSurface();
 
     void createSwapchain();
+
+    void createRenderPass();
 
     void createGraphicsPipeline();
 
@@ -49,26 +53,9 @@ private:
 
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
-    Window* m_window{};
+    Window* mWindow{};
 
-    // Vulkan components
-    VkInstance m_instance{};
-    struct {
-        VkPhysicalDevice physicalDevice{};
-        VkDevice logicalDevice{};
-    } coreDevice{};
-
-    VkQueue m_graphicsQueue{};
-    VkQueue m_presentationQueue{};
-    VkSurfaceKHR m_surface{};
-    VkSwapchainKHR m_swapchain{};
-    std::vector<SwapchainImage> m_swapchainImages{};
-
-    // Pipeline
-    VkPipelineLayout pipelineLayout{};
-
-    // Utility
-    VkFormat swapchainImageFormat{};
-    VkExtent2D swapchainExtent{};
+	vk::raii::Context context;
+	vk::raii::Instance instance{nullptr};
 };
 
