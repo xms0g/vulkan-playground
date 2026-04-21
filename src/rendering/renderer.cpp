@@ -20,9 +20,9 @@ int VulkanRenderer::init(Window* window) {
 	try {
 		createInstance();
 		setupDebugMessenger();
-		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
+		createSurface();
 		createSwapchain();
 		createRenderPass();
 		createGraphicsPipeline();
@@ -126,6 +126,18 @@ void VulkanRenderer::createGraphicsPipeline() {
 }
 
 void VulkanRenderer::getPhysicalDevice() {
+	const auto physicalDevices = instance.enumeratePhysicalDevices();
+
+	if (physicalDevices.empty()) {
+		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+	}
+
+	for (auto& device: physicalDevices) {
+		if (checkDeviceSuitable(device)) {
+			physicalDevice = device;
+			break;
+		}
+	}
 }
 
 QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
@@ -156,6 +168,52 @@ vk::Bool32 VulkanRenderer::debugCallback(
 	return vk::False;
 }
 
+bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& device) {
+	// Check if the physicalDevice supports the Vulkan 1.3 API version
+	bool supportsVulkan1_3 = device.getProperties().apiVersion >= vk::ApiVersion13;
+
+	// Check if any of the queue families support graphics operations
+	bool supportsGraphics{false};
+	for (const auto& qfp: device.getQueueFamilyProperties()) {
+		if (qfp.queueFlags & vk::QueueFlagBits::eGraphics) {
+			supportsGraphics = true;
+			break;
+		}
+	}
+
+	// Check if all required physicalDevice extensions are available
+	std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
+	std::unordered_set<std::string_view> availableSet;
+	for (const auto& [extensionName, specVersion]: device.enumerateDeviceExtensionProperties()) {
+		availableSet.insert(extensionName);
+	}
+
+	bool supportsAllRequiredExtensions{true};
+	for (const char* required: requiredDeviceExtension) {
+		if (!availableSet.contains(required)) {
+			supportsAllRequiredExtensions = false;
+			break;
+		}
+	}
+
+	// Check if the physicalDevice supports the required features (dynamic rendering and extended dynamic state)
+	auto features2 = device.getFeatures2<
+		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan13Features,
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+
+	// 2. Extract the specific feature blocks
+	const auto& vk13Features = features2.get<vk::PhysicalDeviceVulkan13Features>();
+	const auto& extDynamicFeatures = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+
+	// 3. Perform the checks with clear boolean logic
+	bool supportsDynamicRendering = vk13Features.dynamicRendering;
+	bool supportsExtendedDynamicState = extDynamicFeatures.extendedDynamicState;
+	bool supportsRequiredFeatures = supportsDynamicRendering && supportsExtendedDynamicState;
+
+	return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
+}
+
 bool VulkanRenderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
 }
 
@@ -164,10 +222,6 @@ bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 }
 
 bool VulkanRenderer::checkValidationLayerSupport(const std::vector<const char*>& checkLayers) {
-}
-
-
-bool VulkanRenderer::checkDeviceSuitable(VkPhysicalDevice device) {
 }
 
 VkSurfaceFormatKHR VulkanRenderer::chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {

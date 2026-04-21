@@ -46,13 +46,13 @@ private:
 		const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData);
 
+	bool checkDeviceSuitable(const vk::raii::PhysicalDevice& device);
+
 	bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 
 	bool checkValidationLayerSupport(const std::vector<const char*>& checkValidationLayers);
-
-	bool checkDeviceSuitable(VkPhysicalDevice device);
 
 	VkSurfaceFormatKHR chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
 
@@ -68,5 +68,6 @@ private:
 
 	vk::raii::Context context;
 	vk::raii::Instance instance{nullptr};
+	vk::raii::PhysicalDevice physicalDevice{nullptr};
 	vk::raii::DebugUtilsMessengerEXT debugMessenger{nullptr};
 };
