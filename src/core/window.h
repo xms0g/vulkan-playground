@@ -1,30 +1,29 @@
 #pragma once
-
 #include <string>
+#define GLFW_INCLUDE_VULKAN  
 #include <GLFW/glfw3.h>
 #include "IWindow.hpp"
 
-
 class Window : public IWindow<GLFWwindow> {
 public:
-    Window() = default;
+	Window() = default;
 
-    ~Window() override;
+	~Window() override;
 
-    void swapBuffer() override;
+	void updateFpsCounter(float dt);
 
-    void updateFpsCounter(float dt);
+	bool shouldClose() const;
 
-    bool shouldClose() const;
+	void swapBuffer() override;
 
-private:
-    void initImpl(const char* title, int width, int height, bool fullscreen) override;
+protected:
+	void initImpl(const char* title, int width, int height, bool fullscreen) override;
 
-    void clearImpl(float r, float g, float b, float a) override;
+	void clearImpl(float r, float g, float b, float a) override;
 
-    std::string m_title;
+	std::string m_title;
 
-    double m_previousSeconds{};
-    double m_currentSeconds{};
-    int m_frameCount{};
+	double m_previousSeconds{};
+	double m_currentSeconds{};
+	int m_frameCount{};
 };

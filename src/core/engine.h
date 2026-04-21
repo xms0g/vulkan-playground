@@ -17,7 +17,7 @@ private:
 
     void update();
 
-    void render();
+    void render() const;
 
     std::unique_ptr<VulkanRenderer> renderer;
     std::unique_ptr<Window> window;

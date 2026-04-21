@@ -1,12 +1,12 @@
 #include "engine.h"
 #include "window.h"
-#include "../renderer/vulkanRenderer.h"
+#include "../rendering/renderer.h"
 
 Engine::Engine()
 	: renderer(std::make_unique<VulkanRenderer>()),
 	  window(std::make_unique<Window>()) {
 	try {
-		window->init("vkREngine");
+		window->init("abra");
 		renderer->init(window.get());
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
@@ -33,6 +33,6 @@ void Engine::update() {
 	//window.updateFpsCounter(deltaTime);
 }
 
-void Engine::render() {
+void Engine::render() const {
 	window->swapBuffer();
 }

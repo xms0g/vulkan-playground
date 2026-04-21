@@ -1,8 +1,16 @@
 #include "window.h"
 
 Window::~Window() {
-    glfwDestroyWindow(m_window);
+    glfwDestroyWindow(mWindow);
     glfwTerminate();
+}
+
+bool Window::shouldClose() const {
+	return glfwWindowShouldClose(mWindow);
+}
+
+void Window::swapBuffer() {
+	glfwSwapBuffers(mWindow);
 }
 
 void Window::initImpl(const char* title, int width, int height, bool fullscreen) {
@@ -15,16 +23,14 @@ void Window::initImpl(const char* title, int width, int height, bool fullscreen)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    m_window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    mWindow = glfwCreateWindow(width, height, title, nullptr, nullptr);
 }
 
 void Window::clearImpl(float r, float g, float b, float a) {
 
 }
 
-void Window::swapBuffer() {
-    glfwSwapBuffers(m_window);
-}
+
 
 void Window::updateFpsCounter(float dt) {
     double elapsedSeconds;
@@ -39,13 +45,11 @@ void Window::updateFpsCounter(float dt) {
 
         snprintf(tmp, 128, "%s @ fps: %.2f", m_title.c_str(), fps);
 
-        glfwSetWindowTitle(m_window, tmp);
+        glfwSetWindowTitle(mWindow, tmp);
         m_frameCount = 0;
     }
     m_frameCount++;
 }
 
-bool Window::shouldClose() const {
-    return glfwWindowShouldClose(m_window);
-}
+
 

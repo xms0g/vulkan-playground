@@ -1,12 +1,13 @@
-#include "vulkanRenderer.h"
+#include "renderer.h"
 #include <cstring>
 #include <set>
 #include <algorithm>
+#include <iostream>
 #include <stdexcept>
 #include <unordered_set>
 #include <GLFW/glfw3.h>
 #include "deviceExtension.hpp"
-#include "vulkanValidation.hpp"
+#include "validation.hpp"
 #include "../core/window.h"
 #include "../../libs/filesystem/filesystem.h"
 
@@ -18,6 +19,7 @@ int VulkanRenderer::init(Window* window) {
 
 	try {
 		createInstance();
+		setupDebugMessenger();
 		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
@@ -39,23 +41,32 @@ void VulkanRenderer::createInstance() {
 		.apiVersion = vk::ApiVersion14
 	};
 
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	if (glfwExtensions == nullptr) {
-		throw std::runtime_error("Failed to get Instance Extensions!");
+	if (enableValidationLayers) {
+		std::unordered_set<std::string> supportedValidationLayers;
+		for (const auto& layer: context.enumerateInstanceLayerProperties()) {
+			supportedValidationLayers.insert(layer.layerName);
+		}
+
+		for (auto& layer: validationLayers) {
+			if (!supportedValidationLayers.contains(layer)) {
+				throw std::runtime_error("Required Validation Layer not supported: " + std::string(layer));
+			}
+		}
 	}
 
-	std::unordered_set<std::string> supported;
-	for (const auto& [extensionName, specVersion] : context.enumerateInstanceExtensionProperties()) {
-		supported.insert(extensionName);
+	const auto glfwExtensions = getRequiredInstanceExtensions();
+
+	std::unordered_set<std::string> supportedExtensions;
+	for (const auto& [extensionName, specVersion]: context.enumerateInstanceExtensionProperties()) {
+		supportedExtensions.insert(extensionName);
 	}
 
 	std::vector<const char*> requiredExtensions;
-	for (uint32_t i = 0; i < glfwExtensionCount; ++i) {
-		if (!supported.contains(glfwExtensions[i])) {
-			throw std::runtime_error("Required GLFW extension not supported: " + std::string(glfwExtensions[i]));
+	for (const auto& extension: glfwExtensions) {
+		if (!supportedExtensions.contains(extension)) {
+			throw std::runtime_error("Required GLFW extension not supported: " + std::string(extension));
 		}
-		requiredExtensions.emplace_back(glfwExtensions[i]);
+		requiredExtensions.emplace_back(extension);
 	}
 
 	vk::InstanceCreateFlagBits flags{0};
@@ -67,11 +78,36 @@ void VulkanRenderer::createInstance() {
 	const vk::InstanceCreateInfo createInfo{
 		.flags = flags,
 		.pApplicationInfo = &appInfo,
+		.enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
+		.ppEnabledLayerNames = validationLayers.data(),
 		.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
 		.ppEnabledExtensionNames = requiredExtensions.data()
 	};
 
 	instance = vk::raii::Instance(context, createInfo);
+}
+
+void VulkanRenderer::setupDebugMessenger() {
+	if constexpr (!enableValidationLayers) {
+		return;
+	}
+
+	constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+
+	constexpr vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags(
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+
+	constexpr vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{
+		.messageSeverity = severityFlags,
+		.messageType = messageTypeFlags,
+		.pfnUserCallback = &debugCallback
+	};
+
+	debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 }
 
 void VulkanRenderer::createLogicalDevice() {
@@ -96,6 +132,28 @@ QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
 }
 
 SwapchainDetails VulkanRenderer::getSwapChainDetails(VkPhysicalDevice device) {
+}
+
+std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions() {
+	uint32_t glfwExtensionCount = 0;
+	const auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+	if (enableValidationLayers) {
+		extensions.push_back(vk::EXTDebugUtilsExtensionName);
+	}
+
+	return extensions;
+}
+
+vk::Bool32 VulkanRenderer::debugCallback(
+	vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+	const vk::DebugUtilsMessageTypeFlagsEXT type,
+	const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+	void* pUserData) {
+	std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
+
+	return vk::False;
 }
 
 bool VulkanRenderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
