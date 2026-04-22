@@ -3,6 +3,8 @@
 #include <set>
 #include <algorithm>
 #include <iostream>
+#include <cstdint> // Necessary for uint32_t
+#include <limits> // Necessary for std::numeric_limits
 #include <stdexcept>
 #include <unordered_set>
 #include <GLFW/glfw3.h>
@@ -117,7 +119,7 @@ void Renderer::createLogicalDevice() {
 
 	for (uint32_t i = 0; i < queueFamilyProperties.size(); ++i) {
 		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics &&
-			mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
+		    mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
 			graphicsQueueFamilyIndex = i;
 			break;
 		}
@@ -135,7 +137,7 @@ void Renderer::createLogicalDevice() {
 		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
 		{.dynamicRendering = true}, // Enable dynamic rendering from Vulkan 1.3
 		{.extendedDynamicState = true} // Enable extended dynamic state from the extension
-		};
+	};
 
 	float queuePriority = 0.5f;
 	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
@@ -166,6 +168,36 @@ void Renderer::createSurface() {
 }
 
 void Renderer::createSwapchain() {
+	const vk::SurfaceCapabilitiesKHR surfaceCapabilities = mPhysicalDevice.getSurfaceCapabilitiesKHR(*mSurface);
+	mSwapChainExtent = chooseSwapExtent(surfaceCapabilities);
+	const uint32_t minImageCount = chooseSwapMinImageCount(surfaceCapabilities);
+
+	const std::vector<vk::SurfaceFormatKHR> availableFormats = mPhysicalDevice.getSurfaceFormatsKHR(*mSurface);
+	const vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(availableFormats);
+	mSwapChainSurfaceFormat = surfaceFormat;
+
+	const std::vector<vk::PresentModeKHR> availablePresentModes = mPhysicalDevice.getSurfacePresentModesKHR(*mSurface);
+	const vk::PresentModeKHR presentMode = chooseSwapPresentMode(availablePresentModes);
+
+	vk::SwapchainCreateInfoKHR swapChainCreateInfo{
+		.surface = *mSurface,
+		.minImageCount = minImageCount,
+		.imageFormat = surfaceFormat.format,
+		.imageColorSpace = surfaceFormat.colorSpace,
+		.imageExtent = mSwapChainExtent,
+		.imageArrayLayers = 1,
+		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+		.imageSharingMode = vk::SharingMode::eExclusive,
+		.preTransform = surfaceCapabilities.currentTransform,
+		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+		.presentMode = presentMode,
+		.clipped = true
+	};
+
+	swapChainCreateInfo.oldSwapchain = nullptr;
+
+	mSwapChain = vk::raii::SwapchainKHR(mDevice, swapChainCreateInfo);
+	mSwapChainImages = mSwapChain.getImages();
 }
 
 void Renderer::createRenderPass() {
@@ -260,6 +292,51 @@ bool Renderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
 }
 
+vk::SurfaceFormatKHR Renderer::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+	for (const auto& format: availableFormats) {
+		if (format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+			return format;
+		}
+	}
+
+	return availableFormats[0];
+}
+
+vk::PresentModeKHR Renderer::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) {
+	for (const auto& mode: availablePresentModes) {
+		if (mode == vk::PresentModeKHR::eMailbox) {
+			return mode;
+		}
+	}
+
+	return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D Renderer::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		return capabilities.currentExtent;
+	}
+
+	int width, height;
+	glfwGetFramebufferSize(mWindow->nativeHandle(), &width, &height);
+
+	return {
+		std::clamp<uint32_t>(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+		std::clamp<uint32_t>(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+	};
+}
+
+uint32_t Renderer::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities) {
+	auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
+
+	if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount)) {
+		minImageCount = surfaceCapabilities.maxImageCount;
+	}
+
+	return minImageCount;
+}
+
+
 bool Renderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
 }
 
@@ -268,15 +345,6 @@ bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 }
 
 bool Renderer::checkValidationLayerSupport(const std::vector<const char*>& checkLayers) {
-}
-
-VkSurfaceFormatKHR Renderer::chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
-}
-
-VkPresentModeKHR Renderer::chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes) {
-}
-
-VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities) {
 }
 
 VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {

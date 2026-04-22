@@ -44,23 +44,26 @@ private:
 
 	bool checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice);
 
+	vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+
+	vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+
+	vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+
+	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
+
+
 	bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 
 	bool checkValidationLayerSupport(const std::vector<const char*>& checkValidationLayers);
 
-	VkSurfaceFormatKHR chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
-
-	VkPresentModeKHR chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes);
-
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
-
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
-	Window* mWindow{};
+	Window* mWindow{nullptr};
 
 	vk::raii::Context mContext;
 	vk::raii::Instance mInstance{nullptr};
@@ -68,5 +71,9 @@ private:
 	vk::raii::Device mDevice{nullptr};
 	vk::raii::Queue mGraphicsQueue{nullptr};
 	vk::raii::SurfaceKHR mSurface{nullptr};
+	vk::raii::SwapchainKHR mSwapChain{nullptr};
+	vk::SurfaceFormatKHR mSwapChainSurfaceFormat;
+	vk::Extent2D mSwapChainExtent;
+	std::vector<vk::Image> mSwapChainImages;
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
