@@ -1,7 +1,7 @@
 #pragma once
+#include <array>
 
-#include <vector>
-
-const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+constexpr std::array<const char*, 2> deviceExtensions = {
+	vk::KHRSwapchainExtensionName,
+	vk::KHRPortabilitySubsetExtensionName
 };

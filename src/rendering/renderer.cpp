@@ -111,6 +111,43 @@ void VulkanRenderer::setupDebugMessenger() {
 }
 
 void VulkanRenderer::createLogicalDevice() {
+	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+	uint32_t graphicsQueueFamilyIndex = std::numeric_limits<uint32_t>::max();
+
+	for (uint32_t i = 0; i < queueFamilyProperties.size(); ++i) {
+		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+			graphicsQueueFamilyIndex = i;
+			break;
+		}
+	}
+
+	float queuePriority = 0.5f;
+	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
+		.queueFamilyIndex = graphicsQueueFamilyIndex,
+		.queueCount = 1,
+		.pQueuePriorities = &queuePriority
+	};
+
+	// Create a chain of feature structures
+	vk::StructureChain<
+		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan13Features,
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
+		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
+		{.dynamicRendering = true}, // Enable dynamic rendering from Vulkan 1.3
+		{.extendedDynamicState = true} // Enable extended dynamic state from the extension
+	};
+
+	vk::DeviceCreateInfo deviceCreateInfo{
+		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+		.queueCreateInfoCount = 1,
+		.pQueueCreateInfos = &deviceQueueCreateInfo,
+		.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+		.ppEnabledExtensionNames = deviceExtensions.data()
+	};
+
+	device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+	graphicsQueue = vk::raii::Queue(device, graphicsQueueFamilyIndex, 0);
 }
 
 void VulkanRenderer::createSurface() {
@@ -132,15 +169,12 @@ void VulkanRenderer::getPhysicalDevice() {
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
-	for (auto& device: physicalDevices) {
-		if (checkDeviceSuitable(device)) {
-			physicalDevice = device;
+	for (auto& phyDevice: physicalDevices) {
+		if (checkDeviceSuitable(phyDevice)) {
+			physicalDevice = phyDevice;
 			break;
 		}
 	}
-}
-
-QueueFamilyIndices VulkanRenderer::getQueueFamilies(VkPhysicalDevice device) {
 }
 
 SwapchainDetails VulkanRenderer::getSwapChainDetails(VkPhysicalDevice device) {
@@ -168,13 +202,13 @@ vk::Bool32 VulkanRenderer::debugCallback(
 	return vk::False;
 }
 
-bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& device) {
+bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	// Check if the physicalDevice supports the Vulkan 1.3 API version
-	bool supportsVulkan1_3 = device.getProperties().apiVersion >= vk::ApiVersion13;
+	bool supportsVulkan1_3 = phyDevice.getProperties().apiVersion >= vk::ApiVersion13;
 
 	// Check if any of the queue families support graphics operations
 	bool supportsGraphics{false};
-	for (const auto& qfp: device.getQueueFamilyProperties()) {
+	for (const auto& qfp: phyDevice.getQueueFamilyProperties()) {
 		if (qfp.queueFlags & vk::QueueFlagBits::eGraphics) {
 			supportsGraphics = true;
 			break;
@@ -184,7 +218,7 @@ bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& device)
 	// Check if all required physicalDevice extensions are available
 	std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
 	std::unordered_set<std::string_view> availableSet;
-	for (const auto& [extensionName, specVersion]: device.enumerateDeviceExtensionProperties()) {
+	for (const auto& [extensionName, specVersion]: phyDevice.enumerateDeviceExtensionProperties()) {
 		availableSet.insert(extensionName);
 	}
 
@@ -197,7 +231,7 @@ bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& device)
 	}
 
 	// Check if the physicalDevice supports the required features (dynamic rendering and extended dynamic state)
-	auto features2 = device.getFeatures2<
+	auto features2 = phyDevice.getFeatures2<
 		vk::PhysicalDeviceFeatures2,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();

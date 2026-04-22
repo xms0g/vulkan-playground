@@ -1,9 +1,7 @@
 #pragma once
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
-
 #include "swapchain.hpp"
-#include "queueFamily.hpp"
 
 class Window;
 
@@ -33,8 +31,6 @@ private:
 	// Getters
 	void getPhysicalDevice();
 
-	QueueFamilyIndices getQueueFamilies(VkPhysicalDevice device);
-
 	SwapchainDetails getSwapChainDetails(VkPhysicalDevice device);
 
 	// Support Functions
@@ -46,7 +42,7 @@ private:
 		const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData);
 
-	bool checkDeviceSuitable(const vk::raii::PhysicalDevice& device);
+	bool checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice);
 
 	bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
 
@@ -69,5 +65,7 @@ private:
 	vk::raii::Context context;
 	vk::raii::Instance instance{nullptr};
 	vk::raii::PhysicalDevice physicalDevice{nullptr};
+	vk::raii::Device device{nullptr};
+	vk::raii::Queue graphicsQueue{nullptr};
 	vk::raii::DebugUtilsMessengerEXT debugMessenger{nullptr};
 };

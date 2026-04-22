@@ -6,7 +6,7 @@ Engine::Engine()
 	: renderer(std::make_unique<VulkanRenderer>()),
 	  window(std::make_unique<Window>()) {
 	try {
-		window->init("abra");
+		window->init("Vulkan");
 		renderer->init(window.get());
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
