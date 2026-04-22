@@ -27,7 +27,6 @@ int Renderer::init(Window* window) {
 		createLogicalDevice();
 		createSwapchain();
 		createImageViews();
-		createRenderPass();
 		createGraphicsPipeline();
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
@@ -221,9 +220,6 @@ void Renderer::createImageViews() {
 	}
 }
 
-void Renderer::createRenderPass() {
-}
-
 void Renderer::createGraphicsPipeline() {
 }
 
@@ -278,14 +274,13 @@ bool Renderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	}
 
 	// Check if all required physicalDevice extensions are available
-	std::vector<const char*> requiredDeviceExtension = {vk::KHRSwapchainExtensionName};
 	std::unordered_set<std::string_view> availableSet;
 	for (const auto& [extensionName, specVersion]: phyDevice.enumerateDeviceExtensionProperties()) {
 		availableSet.insert(extensionName);
 	}
 
 	bool supportsAllRequiredExtensions{true};
-	for (const char* required: requiredDeviceExtension) {
+	for (const char* required: deviceExtensions) {
 		if (!availableSet.contains(required)) {
 			supportsAllRequiredExtensions = false;
 			break;

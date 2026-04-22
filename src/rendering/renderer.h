@@ -26,8 +26,6 @@ private:
 
 	void createImageViews();
 
-	void createRenderPass();
-
 	void createGraphicsPipeline();
 
 	// Getters
