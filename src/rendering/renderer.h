@@ -18,9 +18,9 @@ private:
 
 	void setupDebugMessenger();
 
-	void createLogicalDevice();
-
 	void createSurface();
+
+	void createLogicalDevice();
 
 	void createSwapchain();
 
@@ -62,10 +62,11 @@ private:
 
 	Window* mWindow{};
 
-	vk::raii::Context context;
-	vk::raii::Instance instance{nullptr};
-	vk::raii::PhysicalDevice physicalDevice{nullptr};
-	vk::raii::Device device{nullptr};
-	vk::raii::Queue graphicsQueue{nullptr};
-	vk::raii::DebugUtilsMessengerEXT debugMessenger{nullptr};
+	vk::raii::Context mContext;
+	vk::raii::Instance mInstance{nullptr};
+	vk::raii::PhysicalDevice mPhysicalDevice{nullptr};
+	vk::raii::Device mDevice{nullptr};
+	vk::raii::Queue mGraphicsQueue{nullptr};
+	vk::raii::SurfaceKHR mSurface{nullptr};
+	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

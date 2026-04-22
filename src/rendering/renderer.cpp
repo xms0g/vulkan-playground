@@ -20,9 +20,9 @@ int VulkanRenderer::init(Window* window) {
 	try {
 		createInstance();
 		setupDebugMessenger();
+		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
-		createSurface();
 		createSwapchain();
 		createRenderPass();
 		createGraphicsPipeline();
@@ -43,7 +43,7 @@ void VulkanRenderer::createInstance() {
 
 	if (enableValidationLayers) {
 		std::unordered_set<std::string> supportedValidationLayers;
-		for (const auto& layer: context.enumerateInstanceLayerProperties()) {
+		for (const auto& layer: mContext.enumerateInstanceLayerProperties()) {
 			supportedValidationLayers.insert(layer.layerName);
 		}
 
@@ -57,7 +57,7 @@ void VulkanRenderer::createInstance() {
 	const auto glfwExtensions = getRequiredInstanceExtensions();
 
 	std::unordered_set<std::string> supportedExtensions;
-	for (const auto& [extensionName, specVersion]: context.enumerateInstanceExtensionProperties()) {
+	for (const auto& [extensionName, specVersion]: mContext.enumerateInstanceExtensionProperties()) {
 		supportedExtensions.insert(extensionName);
 	}
 
@@ -84,7 +84,7 @@ void VulkanRenderer::createInstance() {
 		.ppEnabledExtensionNames = requiredExtensions.data()
 	};
 
-	instance = vk::raii::Instance(context, createInfo);
+	mInstance = vk::raii::Instance(mContext, createInfo);
 }
 
 void VulkanRenderer::setupDebugMessenger() {
@@ -107,26 +107,24 @@ void VulkanRenderer::setupDebugMessenger() {
 		.pfnUserCallback = &debugCallback
 	};
 
-	debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
+	mDebugMessenger = mInstance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 }
 
 void VulkanRenderer::createLogicalDevice() {
-	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-	uint32_t graphicsQueueFamilyIndex = std::numeric_limits<uint32_t>::max();
+	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
+	uint32_t graphicsQueueFamilyIndex = ~0;
 
 	for (uint32_t i = 0; i < queueFamilyProperties.size(); ++i) {
-		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics) {
+		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics &&
+			mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
 			graphicsQueueFamilyIndex = i;
 			break;
 		}
 	}
 
-	float queuePriority = 0.5f;
-	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-		.queueFamilyIndex = graphicsQueueFamilyIndex,
-		.queueCount = 1,
-		.pQueuePriorities = &queuePriority
-	};
+	if (graphicsQueueFamilyIndex == ~0) {
+		throw std::runtime_error("Could not find a queue for graphics and present -> terminating");
+	}
 
 	// Create a chain of feature structures
 	vk::StructureChain<
@@ -136,8 +134,15 @@ void VulkanRenderer::createLogicalDevice() {
 		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
 		{.dynamicRendering = true}, // Enable dynamic rendering from Vulkan 1.3
 		{.extendedDynamicState = true} // Enable extended dynamic state from the extension
-	};
+		};
 
+	float queuePriority = 0.5f;
+	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
+		.queueFamilyIndex = graphicsQueueFamilyIndex,
+		.queueCount = 1,
+		.pQueuePriorities = &queuePriority
+	};
+	
 	vk::DeviceCreateInfo deviceCreateInfo{
 		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
 		.queueCreateInfoCount = 1,
@@ -146,11 +151,17 @@ void VulkanRenderer::createLogicalDevice() {
 		.ppEnabledExtensionNames = deviceExtensions.data()
 	};
 
-	device = vk::raii::Device(physicalDevice, deviceCreateInfo);
-	graphicsQueue = vk::raii::Queue(device, graphicsQueueFamilyIndex, 0);
+	mDevice = vk::raii::Device(mPhysicalDevice, deviceCreateInfo);
+	mGraphicsQueue = vk::raii::Queue(mDevice, graphicsQueueFamilyIndex, 0);
 }
 
 void VulkanRenderer::createSurface() {
+	VkSurfaceKHR surface;
+	if (glfwCreateWindowSurface(*mInstance, mWindow->nativeHandle(), nullptr, &surface) != 0) {
+		throw std::runtime_error("Failed to create window surface!");
+	}
+
+	mSurface = vk::raii::SurfaceKHR(mInstance, surface);
 }
 
 void VulkanRenderer::createSwapchain() {
@@ -163,7 +174,7 @@ void VulkanRenderer::createGraphicsPipeline() {
 }
 
 void VulkanRenderer::getPhysicalDevice() {
-	const auto physicalDevices = instance.enumeratePhysicalDevices();
+	const auto physicalDevices = mInstance.enumeratePhysicalDevices();
 
 	if (physicalDevices.empty()) {
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
@@ -171,7 +182,7 @@ void VulkanRenderer::getPhysicalDevice() {
 
 	for (auto& phyDevice: physicalDevices) {
 		if (checkDeviceSuitable(phyDevice)) {
-			physicalDevice = phyDevice;
+			mPhysicalDevice = phyDevice;
 			break;
 		}
 	}
