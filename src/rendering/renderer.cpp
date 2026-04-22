@@ -3,8 +3,7 @@
 #include <set>
 #include <algorithm>
 #include <iostream>
-#include <cstdint> // Necessary for uint32_t
-#include <limits> // Necessary for std::numeric_limits
+#include <limits>
 #include <stdexcept>
 #include <unordered_set>
 #include <GLFW/glfw3.h>
@@ -27,6 +26,7 @@ int Renderer::init(Window* window) {
 		getPhysicalDevice();
 		createLogicalDevice();
 		createSwapchain();
+		createImageViews();
 		createRenderPass();
 		createGraphicsPipeline();
 	} catch (const std::runtime_error& e) {
@@ -200,6 +200,27 @@ void Renderer::createSwapchain() {
 	mSwapChainImages = mSwapChain.getImages();
 }
 
+void Renderer::createImageViews() {
+	assert(mSwapChainImageViews.empty());
+
+	vk::ImageViewCreateInfo imageViewCreateInfo{
+		.viewType = vk::ImageViewType::e2D,
+		.format = mSwapChainSurfaceFormat.format,
+		.components = {
+			vk::ComponentSwizzle::eIdentity,
+			vk::ComponentSwizzle::eIdentity,
+			vk::ComponentSwizzle::eIdentity,
+			vk::ComponentSwizzle::eIdentity
+		},
+		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
+	};
+
+	for (const auto& image: mSwapChainImages) {
+		imageViewCreateInfo.image = image;
+		mSwapChainImageViews.emplace_back(mDevice, imageViewCreateInfo);
+	}
+}
+
 void Renderer::createRenderPass() {
 }
 
@@ -219,9 +240,6 @@ void Renderer::getPhysicalDevice() {
 			break;
 		}
 	}
-}
-
-SwapchainDetails Renderer::getSwapChainDetails(VkPhysicalDevice device) {
 }
 
 std::vector<const char*> Renderer::getRequiredInstanceExtensions() {
@@ -334,21 +352,4 @@ uint32_t Renderer::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& sur
 	}
 
 	return minImageCount;
-}
-
-
-bool Renderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
-}
-
-
-bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
-}
-
-bool Renderer::checkValidationLayerSupport(const std::vector<const char*>& checkLayers) {
-}
-
-VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-}
-
-VkShaderModule Renderer::createShaderModule(const std::vector<char>& code) {
 }

@@ -1,7 +1,7 @@
 #pragma once
+#include <cstdint>
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
-#include "swapchain.hpp"
 
 class Window;
 
@@ -24,14 +24,14 @@ private:
 
 	void createSwapchain();
 
+	void createImageViews();
+
 	void createRenderPass();
 
 	void createGraphicsPipeline();
 
 	// Getters
 	void getPhysicalDevice();
-
-	SwapchainDetails getSwapChainDetails(VkPhysicalDevice device);
 
 	// Support Functions
 	std::vector<const char*> getRequiredInstanceExtensions();
@@ -52,17 +52,6 @@ private:
 
 	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
-
-	bool checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions);
-
-	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-
-	bool checkValidationLayerSupport(const std::vector<const char*>& checkValidationLayers);
-
-	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
-
-	VkShaderModule createShaderModule(const std::vector<char>& code);
-
 	Window* mWindow{nullptr};
 
 	vk::raii::Context mContext;
@@ -75,5 +64,6 @@ private:
 	vk::SurfaceFormatKHR mSwapChainSurfaceFormat;
 	vk::Extent2D mSwapChainExtent;
 	std::vector<vk::Image> mSwapChainImages;
+	std::vector<vk::raii::ImageView> mSwapChainImageViews;
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

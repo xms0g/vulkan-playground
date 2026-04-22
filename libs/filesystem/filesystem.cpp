@@ -15,7 +15,7 @@ std::vector<char> fs::readFile(const std::string& fileName) {
         throw std::runtime_error("Failed to read file: " + fileName);
     }
 
-    size_t fileSize = (size_t) file.tellg();
+    const size_t fileSize = (size_t) file.tellg();
     std::vector<char> fileBuffer(fileSize);
 
     file.seekg(0);
