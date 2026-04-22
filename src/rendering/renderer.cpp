@@ -11,10 +11,11 @@
 #include "../core/window.h"
 #include "../../libs/filesystem/filesystem.h"
 
-VulkanRenderer::~VulkanRenderer() {
-}
+Renderer::Renderer() = default;
 
-int VulkanRenderer::init(Window* window) {
+Renderer::~Renderer() = default;
+
+int Renderer::init(Window* window) {
 	mWindow = window;
 
 	try {
@@ -32,7 +33,7 @@ int VulkanRenderer::init(Window* window) {
 	return 0;
 }
 
-void VulkanRenderer::createInstance() {
+void Renderer::createInstance() {
 	constexpr vk::ApplicationInfo appInfo{
 		.pApplicationName = "Hello Triangle",
 		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -87,7 +88,7 @@ void VulkanRenderer::createInstance() {
 	mInstance = vk::raii::Instance(mContext, createInfo);
 }
 
-void VulkanRenderer::setupDebugMessenger() {
+void Renderer::setupDebugMessenger() {
 	if constexpr (!enableValidationLayers) {
 		return;
 	}
@@ -110,7 +111,7 @@ void VulkanRenderer::setupDebugMessenger() {
 	mDebugMessenger = mInstance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 }
 
-void VulkanRenderer::createLogicalDevice() {
+void Renderer::createLogicalDevice() {
 	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
 	uint32_t graphicsQueueFamilyIndex = ~0;
 
@@ -142,7 +143,7 @@ void VulkanRenderer::createLogicalDevice() {
 		.queueCount = 1,
 		.pQueuePriorities = &queuePriority
 	};
-	
+
 	vk::DeviceCreateInfo deviceCreateInfo{
 		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
 		.queueCreateInfoCount = 1,
@@ -155,7 +156,7 @@ void VulkanRenderer::createLogicalDevice() {
 	mGraphicsQueue = vk::raii::Queue(mDevice, graphicsQueueFamilyIndex, 0);
 }
 
-void VulkanRenderer::createSurface() {
+void Renderer::createSurface() {
 	VkSurfaceKHR surface;
 	if (glfwCreateWindowSurface(*mInstance, mWindow->nativeHandle(), nullptr, &surface) != 0) {
 		throw std::runtime_error("Failed to create window surface!");
@@ -164,16 +165,16 @@ void VulkanRenderer::createSurface() {
 	mSurface = vk::raii::SurfaceKHR(mInstance, surface);
 }
 
-void VulkanRenderer::createSwapchain() {
+void Renderer::createSwapchain() {
 }
 
-void VulkanRenderer::createRenderPass() {
+void Renderer::createRenderPass() {
 }
 
-void VulkanRenderer::createGraphicsPipeline() {
+void Renderer::createGraphicsPipeline() {
 }
 
-void VulkanRenderer::getPhysicalDevice() {
+void Renderer::getPhysicalDevice() {
 	const auto physicalDevices = mInstance.enumeratePhysicalDevices();
 
 	if (physicalDevices.empty()) {
@@ -188,10 +189,10 @@ void VulkanRenderer::getPhysicalDevice() {
 	}
 }
 
-SwapchainDetails VulkanRenderer::getSwapChainDetails(VkPhysicalDevice device) {
+SwapchainDetails Renderer::getSwapChainDetails(VkPhysicalDevice device) {
 }
 
-std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions() {
+std::vector<const char*> Renderer::getRequiredInstanceExtensions() {
 	uint32_t glfwExtensionCount = 0;
 	const auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
@@ -203,7 +204,7 @@ std::vector<const char*> VulkanRenderer::getRequiredInstanceExtensions() {
 	return extensions;
 }
 
-vk::Bool32 VulkanRenderer::debugCallback(
+vk::Bool32 Renderer::debugCallback(
 	vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
 	const vk::DebugUtilsMessageTypeFlagsEXT type,
 	const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -213,7 +214,7 @@ vk::Bool32 VulkanRenderer::debugCallback(
 	return vk::False;
 }
 
-bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
+bool Renderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	// Check if the physicalDevice supports the Vulkan 1.3 API version
 	bool supportsVulkan1_3 = phyDevice.getProperties().apiVersion >= vk::ApiVersion13;
 
@@ -259,27 +260,27 @@ bool VulkanRenderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevi
 	return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
 }
 
-bool VulkanRenderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
+bool Renderer::checkInstanceExtensionSupport(const std::vector<const char*>& checkExtensions) {
 }
 
 
-bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool Renderer::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 }
 
-bool VulkanRenderer::checkValidationLayerSupport(const std::vector<const char*>& checkLayers) {
+bool Renderer::checkValidationLayerSupport(const std::vector<const char*>& checkLayers) {
 }
 
-VkSurfaceFormatKHR VulkanRenderer::chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
+VkSurfaceFormatKHR Renderer::chooseBestSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
 }
 
-VkPresentModeKHR VulkanRenderer::chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes) {
+VkPresentModeKHR Renderer::chooseBestPresentationMode(const std::vector<VkPresentModeKHR>& modes) {
 }
 
-VkExtent2D VulkanRenderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities) {
+VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities) {
 }
 
-VkImageView VulkanRenderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
 }
 
-VkShaderModule VulkanRenderer::createShaderModule(const std::vector<char>& code) {
+VkShaderModule Renderer::createShaderModule(const std::vector<char>& code) {
 }

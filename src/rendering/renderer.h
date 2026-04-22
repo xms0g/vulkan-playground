@@ -5,11 +5,11 @@
 
 class Window;
 
-class VulkanRenderer {
+class Renderer {
 public:
-	VulkanRenderer() = default;
+	Renderer();
 
-	~VulkanRenderer();
+	~Renderer();
 
 	int init(Window* window);
 

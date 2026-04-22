@@ -2,7 +2,7 @@
 
 #include <memory>
 
-class VulkanRenderer;
+class Renderer;
 class Window;
 class Engine {
 public:
@@ -19,7 +19,7 @@ private:
 
     void render() const;
 
-    std::unique_ptr<VulkanRenderer> renderer;
+    std::unique_ptr<Renderer> renderer;
     std::unique_ptr<Window> window;
 
     double deltaTime{};

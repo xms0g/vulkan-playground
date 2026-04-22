@@ -3,7 +3,7 @@
 #include "../rendering/renderer.h"
 
 Engine::Engine()
-	: renderer(std::make_unique<VulkanRenderer>()),
+	: renderer(std::make_unique<Renderer>()),
 	  window(std::make_unique<Window>()) {
 	try {
 		window->init("Vulkan");
