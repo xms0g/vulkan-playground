@@ -9,21 +9,21 @@ if (APPLE)
 endif ()
 
 find_package(glfw3 3.2 REQUIRED)
-if (glfw3_FOUND)
-    include_directories(${glfw3_INCLUDE_DIRS})
-endif (glfw3_FOUND)
-
 find_package(Vulkan REQUIRED)
-if (Vulkan_FOUND)
-    include_directories(${Vulkan_INCLUDE_DIRS})
-endif (Vulkan_FOUND)
+find_program(SLANGC_EXECUTABLE slangc REQUIRED)
 
-set(FILESYSTEM
-        ${CMAKE_CURRENT_SOURCE_DIR}/libs/filesystem/filesystem.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/libs/filesystem/filesystem.h)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangHelpers.cmake)
 
 file(GLOB_RECURSE SRC "src/*")
-set(COMPILATION_UNIT ${SRC} ${FILESYSTEM})
+
+set(COMPILATION_UNIT ${SRC})
 
 add_executable(${PROJECT_NAME} ${COMPILATION_UNIT})
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
+
+add_slang_shader_target(MainShaderTarget SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/main.slang")
+add_dependencies(${PROJECT_NAME} MainShaderTarget)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        SHADER_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders/"
+)

@@ -50,6 +50,9 @@ private:
 
 	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
+	[[nodiscard]]
+	vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
+
 	Window* mWindow{nullptr};
 
 	vk::raii::Context mContext;

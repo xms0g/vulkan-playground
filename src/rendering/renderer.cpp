@@ -2,6 +2,7 @@
 #include <cstring>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -10,7 +11,8 @@
 #include "deviceExtension.hpp"
 #include "validation.hpp"
 #include "../core/window.h"
-#include "../../libs/filesystem/filesystem.h"
+#include "../config/config.hpp"
+#include "../io/filesystem.h"
 
 Renderer::Renderer() = default;
 
@@ -221,6 +223,23 @@ void Renderer::createImageViews() {
 }
 
 void Renderer::createGraphicsPipeline() {
+	const auto shaderPath = std::filesystem::path(SHADER_BINARY_DIR) / "main.spv";
+	const auto shaderCode = fs::readFile(shaderPath);
+	const auto shaderModule = createShaderModule(shaderCode);
+
+	const vk::PipelineShaderStageCreateInfo vertShaderStageInfo{
+		.stage = vk::ShaderStageFlagBits::eVertex,
+		.module = shaderModule,
+		.pName = "vertMain"
+	};
+	const vk::PipelineShaderStageCreateInfo fragShaderStageInfo{
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.module = shaderModule,
+		.pName = "fragMain"
+	};
+
+	vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
 }
 
 void Renderer::getPhysicalDevice() {
@@ -347,4 +366,14 @@ uint32_t Renderer::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& sur
 	}
 
 	return minImageCount;
+}
+
+vk::raii::ShaderModule Renderer::createShaderModule(const std::vector<char>& code) const {
+	const vk::ShaderModuleCreateInfo createInfo{
+		.codeSize = code.size() * sizeof(char),
+		.pCode = reinterpret_cast<const uint32_t*>(code.data())
+	};
+
+	vk::raii::ShaderModule shaderModule{mDevice, createInfo};
+	return shaderModule;
 }
