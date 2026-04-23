@@ -66,5 +66,7 @@ private:
 	vk::Extent2D mSwapChainExtent;
 	std::vector<vk::Image> mSwapChainImages;
 	std::vector<vk::raii::ImageView> mSwapChainImageViews;
+	vk::raii::PipelineLayout mPipelineLayout{nullptr};
+	vk::raii::Pipeline mGraphicsPipeline{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
