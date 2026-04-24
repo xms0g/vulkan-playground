@@ -62,14 +62,14 @@ void Renderer::render() {
 		.commandBufferCount = 1,
 		.pCommandBuffers = &*mCommandBuffers[mFrameIndex],
 		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &*mRenderFinishedSemaphores[mFrameIndex]
+		.pSignalSemaphores = &*mRenderFinishedSemaphores[imageIndex]
 	};
 
 	mGraphicsQueue.submit(submitInfo, *mFences[mFrameIndex]);
 
 	const vk::PresentInfoKHR presentInfoKHR{
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &*mRenderFinishedSemaphores[mFrameIndex],
+		.pWaitSemaphores = &*mRenderFinishedSemaphores[imageIndex],
 		.swapchainCount = 1,
 		.pSwapchains = &*mSwapChain,
 		.pImageIndices = &imageIndex
