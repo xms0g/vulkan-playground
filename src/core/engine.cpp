@@ -3,11 +3,11 @@
 #include "../rendering/renderer.h"
 
 Engine::Engine()
-	: renderer(std::make_unique<Renderer>()),
-	  window(std::make_unique<Window>()) {
+	: mRenderer(std::make_unique<Renderer>()),
+	  mWindow(std::make_unique<Window>()) {
 	try {
-		window->init("Vulkan");
-		renderer->init(window.get());
+		mWindow->init("Vulkan");
+		mRenderer->init(mWindow.get());
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
 	}
@@ -16,11 +16,12 @@ Engine::Engine()
 Engine::~Engine() = default;
 
 void Engine::run() {
-	while (!window->shouldClose()) {
+	while (!mWindow->shouldClose()) {
 		processInput();
 		update();
 		render();
 	}
+	mRenderer->waitIdle();
 }
 
 void Engine::processInput() {
@@ -28,11 +29,11 @@ void Engine::processInput() {
 }
 
 void Engine::update() {
-	deltaTime = (glfwGetTime() - millisecsPreviousFrame) / 1000.0f;
-	millisecsPreviousFrame = glfwGetTime();
-	//window.updateFpsCounter(deltaTime);
+	mDeltaTime = (glfwGetTime() - mMillisecsPreviousFrame) / 1000.0f;
+	mMillisecsPreviousFrame = glfwGetTime();
+	mWindow->updateFpsCounter(mDeltaTime);
 }
 
 void Engine::render() const {
-	window->swapBuffer();
+	mRenderer->render();
 }

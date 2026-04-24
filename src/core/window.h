@@ -10,8 +10,9 @@ public:
 
 	~Window() override;
 
-	void updateFpsCounter(float dt);
+	void updateFpsCounter(double dt);
 
+	[[nodiscard]]
 	bool shouldClose() const;
 
 	void swapBuffer() override;

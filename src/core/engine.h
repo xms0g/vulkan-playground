@@ -19,9 +19,9 @@ private:
 
     void render() const;
 
-    std::unique_ptr<Renderer> renderer;
-    std::unique_ptr<Window> window;
+    std::unique_ptr<Renderer> mRenderer;
+    std::unique_ptr<Window> mWindow;
 
-    double deltaTime{};
-    double millisecsPreviousFrame{0};
+    double mDeltaTime{0.0};
+    double mMillisecsPreviousFrame{0};
 };

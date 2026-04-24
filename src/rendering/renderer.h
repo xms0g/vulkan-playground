@@ -13,6 +13,10 @@ public:
 
 	int init(Window* window);
 
+	void render();
+
+	void waitIdle() const;
+
 private:
 	void createInstance();
 
@@ -27,6 +31,23 @@ private:
 	void createImageViews();
 
 	void createGraphicsPipeline();
+
+	void createCommandPool();
+
+	void createCommandBuffer();
+
+	void recordCommandBuffer(uint32_t imageIndex) const;
+
+	void transitionImageLayout(
+		uint32_t                imageIndex,
+		vk::ImageLayout         oldLayout,
+		vk::ImageLayout         newLayout,
+		vk::AccessFlags2        srcAccessMask,
+		vk::AccessFlags2        dstAccessMask,
+		vk::PipelineStageFlags2 srcStageMask,
+		vk::PipelineStageFlags2 dstStageMask) const;
+
+	void createSyncObjects();
 
 	// Getters
 	void getPhysicalDevice();
@@ -60,6 +81,7 @@ private:
 	vk::raii::PhysicalDevice mPhysicalDevice{nullptr};
 	vk::raii::Device mDevice{nullptr};
 	vk::raii::Queue mGraphicsQueue{nullptr};
+	uint32_t mGraphicsQueueFamilyIndex{static_cast<uint32_t>(~0)};
 	vk::raii::SurfaceKHR mSurface{nullptr};
 	vk::raii::SwapchainKHR mSwapChain{nullptr};
 	vk::SurfaceFormatKHR mSwapChainSurfaceFormat;
@@ -68,5 +90,10 @@ private:
 	std::vector<vk::raii::ImageView> mSwapChainImageViews;
 	vk::raii::PipelineLayout mPipelineLayout{nullptr};
 	vk::raii::Pipeline mGraphicsPipeline{nullptr};
+	vk::raii::CommandPool mCommandPool{nullptr};
+	vk::raii::CommandBuffer mCommandBuffer{nullptr};
+	vk::raii::Semaphore mPresentCompleteSemaphore{nullptr};
+	vk::raii::Semaphore mRenderFinishedSemaphore{nullptr};
+	vk::raii::Fence mDrawFence{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

@@ -30,10 +30,63 @@ int Renderer::init(Window* window) {
 		createSwapchain();
 		createImageViews();
 		createGraphicsPipeline();
+		createCommandPool();
+		createCommandBuffer();
+		createSyncObjects();
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
 	}
 	return 0;
+}
+
+void Renderer::render() {
+	auto fenceResult = mDevice.waitForFences(*mDrawFence, vk::True, UINT64_MAX);
+	if (fenceResult != vk::Result::eSuccess) {
+		throw std::runtime_error("Failed to wait for fence!");
+	}
+	mDevice.resetFences(*mDrawFence);
+
+	auto [result, imageIndex] = mSwapChain.acquireNextImage(UINT64_MAX, *mPresentCompleteSemaphore, nullptr);
+
+	recordCommandBuffer(imageIndex);
+
+	mGraphicsQueue.waitIdle();
+
+	vk::PipelineStageFlags waitDestinationStageMask{vk::PipelineStageFlagBits::eColorAttachmentOutput};
+	const vk::SubmitInfo submitInfo{
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &*mPresentCompleteSemaphore,
+		.pWaitDstStageMask = &waitDestinationStageMask,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &*mCommandBuffer,
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores = &*mRenderFinishedSemaphore
+	};
+
+	mGraphicsQueue.submit(submitInfo, *mDrawFence);
+
+	const vk::PresentInfoKHR presentInfoKHR{
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &*mRenderFinishedSemaphore,
+		.swapchainCount = 1,
+		.pSwapchains = &*mSwapChain,
+		.pImageIndices = &imageIndex
+	};
+
+	result = mGraphicsQueue.presentKHR(presentInfoKHR);
+	switch (result) {
+		case vk::Result::eSuccess:
+			break;
+		case vk::Result::eSuboptimalKHR:
+			std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n";
+			break;
+		default:
+			break; // an unexpected result is returned!
+	}
+}
+
+void Renderer::waitIdle() const {
+	mDevice.waitIdle();
 }
 
 void Renderer::createInstance() {
@@ -96,14 +149,16 @@ void Renderer::setupDebugMessenger() {
 		return;
 	}
 
-	constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(
+	constexpr vk::DebugUtilsMessageSeverityFlagsEXT severityFlags{
 		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+	};
 
-	constexpr vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags(
+	constexpr vk::DebugUtilsMessageTypeFlagsEXT messageTypeFlags{
 		vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
 		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation
+	};
 
 	constexpr vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT{
 		.messageSeverity = severityFlags,
@@ -116,17 +171,16 @@ void Renderer::setupDebugMessenger() {
 
 void Renderer::createLogicalDevice() {
 	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
-	uint32_t graphicsQueueFamilyIndex = ~0;
 
 	for (uint32_t i = 0; i < queueFamilyProperties.size(); ++i) {
 		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics &&
 		    mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
-			graphicsQueueFamilyIndex = i;
+			mGraphicsQueueFamilyIndex = i;
 			break;
 		}
 	}
 
-	if (graphicsQueueFamilyIndex == ~0) {
+	if (mGraphicsQueueFamilyIndex == ~0) {
 		throw std::runtime_error("Could not find a queue for graphics and present -> terminating");
 	}
 
@@ -142,7 +196,7 @@ void Renderer::createLogicalDevice() {
 
 	float queuePriority = 0.5f;
 	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-		.queueFamilyIndex = graphicsQueueFamilyIndex,
+		.queueFamilyIndex = mGraphicsQueueFamilyIndex,
 		.queueCount = 1,
 		.pQueuePriorities = &queuePriority
 	};
@@ -156,7 +210,7 @@ void Renderer::createLogicalDevice() {
 	};
 
 	mDevice = vk::raii::Device(mPhysicalDevice, deviceCreateInfo);
-	mGraphicsQueue = vk::raii::Queue(mDevice, graphicsQueueFamilyIndex, 0);
+	mGraphicsQueue = vk::raii::Queue(mDevice, mGraphicsQueueFamilyIndex, 0);
 }
 
 void Renderer::createSurface() {
@@ -305,6 +359,124 @@ void Renderer::createGraphicsPipeline() {
 		mDevice,
 		nullptr,
 		pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+}
+
+void Renderer::createCommandPool() {
+	const vk::CommandPoolCreateInfo poolInfo{
+		.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+		.queueFamilyIndex = mGraphicsQueueFamilyIndex
+	};
+
+	mCommandPool = vk::raii::CommandPool(mDevice, poolInfo);
+}
+
+void Renderer::createCommandBuffer() {
+	const vk::CommandBufferAllocateInfo allocInfo{
+		.commandPool = mCommandPool,
+		.level = vk::CommandBufferLevel::ePrimary,
+		.commandBufferCount = 1
+	};
+
+	mCommandBuffer = std::move(vk::raii::CommandBuffers(mDevice, allocInfo).front());
+}
+
+void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
+	mCommandBuffer.begin({});
+
+	// Before starting rendering, transition the swapchain image to vk::ImageLayout::eColorAttachmentOptimal
+	transitionImageLayout(
+		imageIndex,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eColorAttachmentOptimal,
+		{}, // srcAccessMask (no need to wait for previous operations)
+		vk::AccessFlagBits2::eColorAttachmentWrite, // dstAccessMask
+		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
+		vk::PipelineStageFlagBits2::eColorAttachmentOutput // dstStage
+	);
+
+	constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+
+	vk::RenderingAttachmentInfo attachmentInfo = {
+		.imageView = mSwapChainImageViews[imageIndex],
+		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+		.loadOp = vk::AttachmentLoadOp::eClear,
+		.storeOp = vk::AttachmentStoreOp::eStore,
+		.clearValue = clearColor
+	};
+
+	const vk::RenderingInfo renderingInfo = {
+		.renderArea = {.offset = {0, 0}, .extent = mSwapChainExtent},
+		.layerCount = 1,
+		.colorAttachmentCount = 1,
+		.pColorAttachments = &attachmentInfo
+	};
+
+	mCommandBuffer.beginRendering(renderingInfo);
+	mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *mGraphicsPipeline);
+	mCommandBuffer.setViewport(
+		0,
+		vk::Viewport(0.0f, 0.0f,
+		             static_cast<float>(mSwapChainExtent.width),
+		             static_cast<float>(mSwapChainExtent.height),
+		             0.0f, 1.0f)
+	);
+	mCommandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapChainExtent));
+	mCommandBuffer.draw(3, 1, 0, 0);
+	mCommandBuffer.endRendering();
+
+	// After rendering, transition the swapchain image to vk::ImageLayout::ePresentSrcKHR
+	transitionImageLayout(
+		imageIndex,
+		vk::ImageLayout::eColorAttachmentOptimal,
+		vk::ImageLayout::ePresentSrcKHR,
+		vk::AccessFlagBits2::eColorAttachmentWrite, // srcAccessMask
+		{}, // dstAccessMask
+		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
+		vk::PipelineStageFlagBits2::eBottomOfPipe // dstStage
+	);
+	mCommandBuffer.end();
+}
+
+void Renderer::transitionImageLayout(
+	const uint32_t imageIndex,
+	const vk::ImageLayout oldLayout,
+	const vk::ImageLayout newLayout,
+	const vk::AccessFlags2 srcAccessMask,
+	const vk::AccessFlags2 dstAccessMask,
+	const vk::PipelineStageFlags2 srcStageMask,
+	const vk::PipelineStageFlags2 dstStageMask) const {
+	vk::ImageMemoryBarrier2 barrier = {
+		.srcStageMask = srcStageMask,
+		.srcAccessMask = srcAccessMask,
+		.dstStageMask = dstStageMask,
+		.dstAccessMask = dstAccessMask,
+		.oldLayout = oldLayout,
+		.newLayout = newLayout,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = mSwapChainImages[imageIndex],
+		.subresourceRange = {
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+
+	const vk::DependencyInfo dependency_info = {
+		.dependencyFlags = {},
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &barrier
+	};
+
+	mCommandBuffer.pipelineBarrier2(dependency_info);
+}
+
+void Renderer::createSyncObjects() {
+	mPresentCompleteSemaphore = vk::raii::Semaphore(mDevice, vk::SemaphoreCreateInfo());
+	mRenderFinishedSemaphore = vk::raii::Semaphore(mDevice, vk::SemaphoreCreateInfo());
+	mDrawFence = vk::raii::Fence(mDevice, {.flags = vk::FenceCreateFlagBits::eSignaled});
 }
 
 void Renderer::getPhysicalDevice() {

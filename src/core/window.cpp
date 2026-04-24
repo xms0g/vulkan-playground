@@ -32,16 +32,14 @@ void Window::clearImpl(float r, float g, float b, float a) {
 
 
 
-void Window::updateFpsCounter(float dt) {
-    double elapsedSeconds;
-
-    m_currentSeconds += dt;
-    elapsedSeconds = m_currentSeconds - m_previousSeconds;
+void Window::updateFpsCounter(const double dt) {
+	m_currentSeconds += dt;
+    double elapsedSeconds = m_currentSeconds - m_previousSeconds;
     /* limit text updates to 4 per second */
     if (elapsedSeconds > 0.25) {
         m_previousSeconds = m_currentSeconds;
         char tmp[128];
-        double fps = (double) m_frameCount / elapsedSeconds;
+        const double fps = static_cast<double>(m_frameCount) / elapsedSeconds;
 
         snprintf(tmp, 128, "%s @ fps: %.2f", m_title.c_str(), fps);
 
