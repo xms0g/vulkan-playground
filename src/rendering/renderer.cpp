@@ -191,11 +191,13 @@ void Renderer::createLogicalDevice() {
 	// Create a chain of feature structures
 	vk::StructureChain<
 		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan11Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
-		{}, // vk::PhysicalDeviceFeatures2 (empty for now)
-		{.dynamicRendering = true}, // Enable dynamic rendering from Vulkan 1.3
-		{.extendedDynamicState = true} // Enable extended dynamic state from the extension
+		{},
+		{.shaderDrawParameters = true},
+		{.synchronization2 = true, .dynamicRendering = true},
+		{.extendedDynamicState = true}
 	};
 
 	float queuePriority = 0.5f;
@@ -490,7 +492,7 @@ void Renderer::createSyncObjects() {
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		mPresentCompleteSemaphores.emplace_back(mDevice, vk::SemaphoreCreateInfo());
-		mFences.emplace_back(mDevice,  vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+		mFences.emplace_back(mDevice, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
 	}
 }
 
@@ -561,17 +563,25 @@ bool Renderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	// Check if the physicalDevice supports the required features (dynamic rendering and extended dynamic state)
 	auto features2 = phyDevice.getFeatures2<
 		vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan11Features,
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
 	// 2. Extract the specific feature blocks
+	const auto& vk11Features = features2.get<vk::PhysicalDeviceVulkan11Features>();
 	const auto& vk13Features = features2.get<vk::PhysicalDeviceVulkan13Features>();
 	const auto& extDynamicFeatures = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
 	// 3. Perform the checks with clear boolean logic
+	bool supportsShaderDrawParameters = vk11Features.shaderDrawParameters;
 	bool supportsDynamicRendering = vk13Features.dynamicRendering;
+	bool supportsSynchronization2 = vk13Features.synchronization2;
 	bool supportsExtendedDynamicState = extDynamicFeatures.extendedDynamicState;
-	bool supportsRequiredFeatures = supportsDynamicRendering && supportsExtendedDynamicState;
+	bool supportsRequiredFeatures =
+			supportsShaderDrawParameters &&
+			supportsDynamicRendering &&
+			supportsSynchronization2 &&
+			supportsExtendedDynamicState;
 
 	return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
 }
