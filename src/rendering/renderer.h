@@ -34,16 +34,16 @@ private:
 
 	void createCommandPool();
 
-	void createCommandBuffer();
+	void createCommandBuffers();
 
 	void recordCommandBuffer(uint32_t imageIndex) const;
 
 	void transitionImageLayout(
-		uint32_t                imageIndex,
-		vk::ImageLayout         oldLayout,
-		vk::ImageLayout         newLayout,
-		vk::AccessFlags2        srcAccessMask,
-		vk::AccessFlags2        dstAccessMask,
+		uint32_t imageIndex,
+		vk::ImageLayout oldLayout,
+		vk::ImageLayout newLayout,
+		vk::AccessFlags2 srcAccessMask,
+		vk::AccessFlags2 dstAccessMask,
 		vk::PipelineStageFlags2 srcStageMask,
 		vk::PipelineStageFlags2 dstStageMask) const;
 
@@ -91,9 +91,10 @@ private:
 	vk::raii::PipelineLayout mPipelineLayout{nullptr};
 	vk::raii::Pipeline mGraphicsPipeline{nullptr};
 	vk::raii::CommandPool mCommandPool{nullptr};
-	vk::raii::CommandBuffer mCommandBuffer{nullptr};
-	vk::raii::Semaphore mPresentCompleteSemaphore{nullptr};
-	vk::raii::Semaphore mRenderFinishedSemaphore{nullptr};
-	vk::raii::Fence mDrawFence{nullptr};
+	std::vector<vk::raii::CommandBuffer> mCommandBuffers;
+	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
+	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
+	std::vector<vk::raii::Fence> mFences;
+	uint32_t mFrameIndex{0};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

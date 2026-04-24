@@ -31,7 +31,7 @@ int Renderer::init(Window* window) {
 		createImageViews();
 		createGraphicsPipeline();
 		createCommandPool();
-		createCommandBuffer();
+		createCommandBuffers();
 		createSyncObjects();
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
@@ -40,34 +40,36 @@ int Renderer::init(Window* window) {
 }
 
 void Renderer::render() {
-	auto fenceResult = mDevice.waitForFences(*mDrawFence, vk::True, UINT64_MAX);
+	auto fenceResult = mDevice.waitForFences(*mFences[mFrameIndex], vk::True, UINT64_MAX);
 	if (fenceResult != vk::Result::eSuccess) {
 		throw std::runtime_error("Failed to wait for fence!");
 	}
-	mDevice.resetFences(*mDrawFence);
+	mDevice.resetFences(*mFences[mFrameIndex]);
 
-	auto [result, imageIndex] = mSwapChain.acquireNextImage(UINT64_MAX, *mPresentCompleteSemaphore, nullptr);
+	auto [result, imageIndex] = mSwapChain.acquireNextImage(
+		UINT64_MAX,
+		*mPresentCompleteSemaphores[mFrameIndex],
+		nullptr);
 
+	mCommandBuffers[mFrameIndex].reset();
 	recordCommandBuffer(imageIndex);
-
-	mGraphicsQueue.waitIdle();
 
 	vk::PipelineStageFlags waitDestinationStageMask{vk::PipelineStageFlagBits::eColorAttachmentOutput};
 	const vk::SubmitInfo submitInfo{
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &*mPresentCompleteSemaphore,
+		.pWaitSemaphores = &*mPresentCompleteSemaphores[mFrameIndex],
 		.pWaitDstStageMask = &waitDestinationStageMask,
 		.commandBufferCount = 1,
-		.pCommandBuffers = &*mCommandBuffer,
+		.pCommandBuffers = &*mCommandBuffers[mFrameIndex],
 		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &*mRenderFinishedSemaphore
+		.pSignalSemaphores = &*mRenderFinishedSemaphores[mFrameIndex]
 	};
 
-	mGraphicsQueue.submit(submitInfo, *mDrawFence);
+	mGraphicsQueue.submit(submitInfo, *mFences[mFrameIndex]);
 
 	const vk::PresentInfoKHR presentInfoKHR{
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &*mRenderFinishedSemaphore,
+		.pWaitSemaphores = &*mRenderFinishedSemaphores[mFrameIndex],
 		.swapchainCount = 1,
 		.pSwapchains = &*mSwapChain,
 		.pImageIndices = &imageIndex
@@ -83,6 +85,8 @@ void Renderer::render() {
 		default:
 			break; // an unexpected result is returned!
 	}
+
+	mFrameIndex = (mFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Renderer::waitIdle() const {
@@ -370,18 +374,19 @@ void Renderer::createCommandPool() {
 	mCommandPool = vk::raii::CommandPool(mDevice, poolInfo);
 }
 
-void Renderer::createCommandBuffer() {
+void Renderer::createCommandBuffers() {
 	const vk::CommandBufferAllocateInfo allocInfo{
 		.commandPool = mCommandPool,
 		.level = vk::CommandBufferLevel::ePrimary,
-		.commandBufferCount = 1
+		.commandBufferCount = MAX_FRAMES_IN_FLIGHT
 	};
 
-	mCommandBuffer = std::move(vk::raii::CommandBuffers(mDevice, allocInfo).front());
+	mCommandBuffers = vk::raii::CommandBuffers(mDevice, allocInfo);
 }
 
 void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
-	mCommandBuffer.begin({});
+	auto& commandBuffer = mCommandBuffers[mFrameIndex];
+	commandBuffer.begin({});
 
 	// Before starting rendering, transition the swapchain image to vk::ImageLayout::eColorAttachmentOptimal
 	transitionImageLayout(
@@ -411,18 +416,18 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		.pColorAttachments = &attachmentInfo
 	};
 
-	mCommandBuffer.beginRendering(renderingInfo);
-	mCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *mGraphicsPipeline);
-	mCommandBuffer.setViewport(
+	commandBuffer.beginRendering(renderingInfo);
+	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *mGraphicsPipeline);
+	commandBuffer.setViewport(
 		0,
 		vk::Viewport(0.0f, 0.0f,
 		             static_cast<float>(mSwapChainExtent.width),
 		             static_cast<float>(mSwapChainExtent.height),
 		             0.0f, 1.0f)
 	);
-	mCommandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapChainExtent));
-	mCommandBuffer.draw(3, 1, 0, 0);
-	mCommandBuffer.endRendering();
+	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapChainExtent));
+	commandBuffer.draw(3, 1, 0, 0);
+	commandBuffer.endRendering();
 
 	// After rendering, transition the swapchain image to vk::ImageLayout::ePresentSrcKHR
 	transitionImageLayout(
@@ -434,7 +439,7 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
 		vk::PipelineStageFlagBits2::eBottomOfPipe // dstStage
 	);
-	mCommandBuffer.end();
+	commandBuffer.end();
 }
 
 void Renderer::transitionImageLayout(
@@ -470,13 +475,23 @@ void Renderer::transitionImageLayout(
 		.pImageMemoryBarriers = &barrier
 	};
 
-	mCommandBuffer.pipelineBarrier2(dependency_info);
+	mCommandBuffers[mFrameIndex].pipelineBarrier2(dependency_info);
 }
 
 void Renderer::createSyncObjects() {
-	mPresentCompleteSemaphore = vk::raii::Semaphore(mDevice, vk::SemaphoreCreateInfo());
-	mRenderFinishedSemaphore = vk::raii::Semaphore(mDevice, vk::SemaphoreCreateInfo());
-	mDrawFence = vk::raii::Fence(mDevice, {.flags = vk::FenceCreateFlagBits::eSignaled});
+	assert(
+		mPresentCompleteSemaphores.empty() &&
+		mRenderFinishedSemaphores.empty() &&
+		mFences.empty());
+
+	for (size_t i = 0; i < mSwapChainImages.size(); ++i) {
+		mRenderFinishedSemaphores.emplace_back(mDevice, vk::SemaphoreCreateInfo());
+	}
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+		mPresentCompleteSemaphores.emplace_back(mDevice, vk::SemaphoreCreateInfo());
+		mFences.emplace_back(mDevice,  vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+	}
 }
 
 void Renderer::getPhysicalDevice() {
