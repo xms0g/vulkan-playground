@@ -277,7 +277,7 @@ void Renderer::createImageViews() {
 }
 
 void Renderer::createGraphicsPipeline() {
-	const auto shaderPath = std::filesystem::path(SHADER_BINARY_DIR) / "main.spv";
+	const auto shaderPath = std::filesystem::path(SHADER_BINARY_DIR) / "triangle.spv";
 	const auto shaderCode = fs::readFile(shaderPath);
 	const auto shaderModule = createShaderModule(shaderCode);
 
