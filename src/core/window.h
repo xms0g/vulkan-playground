@@ -15,6 +15,11 @@ public:
 	[[nodiscard]]
 	bool shouldClose() const;
 
+	[[nodiscard]]
+	bool windowResized() const;
+
+	void windowResized(bool resized);
+
 	void swapBuffer() override;
 
 protected:
@@ -27,4 +32,9 @@ protected:
 	double m_previousSeconds{};
 	double m_currentSeconds{};
 	int m_frameCount{};
+
+private:
+	static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
+
+	bool mWindowResized{false};
 };
