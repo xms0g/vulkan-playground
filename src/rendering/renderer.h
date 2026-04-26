@@ -36,6 +36,8 @@ private:
 
 	void createCommandPool();
 
+	void createVertexBuffer(size_t size);
+
 	void createCommandBuffers();
 
 	void recordCommandBuffer(uint32_t imageIndex) const;
@@ -73,6 +75,8 @@ private:
 
 	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
+	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
+
 	[[nodiscard]]
 	vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
@@ -98,5 +102,7 @@ private:
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
 	uint32_t mFrameIndex{0};
+	vk::raii::Buffer mVertexBuffer{nullptr};
+	vk::raii::DeviceMemory mVertexBufferMemory{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

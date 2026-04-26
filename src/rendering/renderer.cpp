@@ -10,9 +10,16 @@
 #include <GLFW/glfw3.h>
 #include "deviceExtension.hpp"
 #include "validation.hpp"
+#include "mesh/vertex.hpp"
 #include "../core/window.h"
 #include "../config/config.hpp"
 #include "../io/filesystem.h"
+
+const std::vector<Vertex> vertices = {
+	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 
 Renderer::Renderer() = default;
 
@@ -31,6 +38,7 @@ int Renderer::init(Window* window) {
 		createImageViews();
 		createGraphicsPipeline();
 		createCommandPool();
+		createVertexBuffer(sizeof(Vertex) * vertices.size());
 		createCommandBuffers();
 		createSyncObjects();
 	} catch (const std::runtime_error& e) {
@@ -318,7 +326,14 @@ void Renderer::createGraphicsPipeline() {
 
 	vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo{
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &bindingDescription,
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+		.pVertexAttributeDescriptions = attributeDescriptions.data()
+	};
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly{
 		.topology = vk::PrimitiveTopology::eTriangleList
@@ -394,6 +409,33 @@ void Renderer::createCommandPool() {
 	mCommandPool = vk::raii::CommandPool(mDevice, poolInfo);
 }
 
+void Renderer::createVertexBuffer(const size_t size) {
+	const vk::BufferCreateInfo bufferInfo{
+		.size = size,
+		.usage = vk::BufferUsageFlagBits::eVertexBuffer,
+		.sharingMode = vk::SharingMode::eExclusive
+	};
+
+	mVertexBuffer = vk::raii::Buffer(mDevice, bufferInfo);
+
+	const vk::MemoryRequirements memRequirements = mVertexBuffer.getMemoryRequirements();
+
+	const vk::MemoryAllocateInfo memoryAllocateInfo{
+		.allocationSize = memRequirements.size,
+		.memoryTypeIndex = findMemoryType(
+			memRequirements.memoryTypeBits,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)
+	};
+	mVertexBufferMemory = vk::raii::DeviceMemory(mDevice, memoryAllocateInfo);
+
+	mVertexBuffer.bindMemory(*mVertexBufferMemory, 0);
+
+	void* data = mVertexBufferMemory.mapMemory(0, bufferInfo.size);
+	memcpy(data, vertices.data(), bufferInfo.size);
+	mVertexBufferMemory.unmapMemory();
+
+}
+
 void Renderer::createCommandBuffers() {
 	const vk::CommandBufferAllocateInfo allocInfo{
 		.commandPool = mCommandPool,
@@ -438,6 +480,8 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 
 	commandBuffer.beginRendering(renderingInfo);
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *mGraphicsPipeline);
+	commandBuffer.bindVertexBuffers(0, {mVertexBuffer}, {0});
+
 	commandBuffer.setViewport(
 		0,
 		vk::Viewport(0.0f, 0.0f,
@@ -446,7 +490,8 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		             0.0f, 1.0f)
 	);
 	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapChainExtent));
-	commandBuffer.draw(3, 1, 0, 0);
+
+	commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 	commandBuffer.endRendering();
 
 	// After rendering, transition the swapchain image to vk::ImageLayout::ePresentSrcKHR
@@ -646,6 +691,18 @@ uint32_t Renderer::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& sur
 	}
 
 	return minImageCount;
+}
+
+uint32_t Renderer::findMemoryType(const uint32_t typeFilter, const vk::MemoryPropertyFlags properties) const {
+	const vk::PhysicalDeviceMemoryProperties memProperties = mPhysicalDevice.getMemoryProperties();
+
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+
+	throw std::runtime_error("Failed to find suitable memory type!");
 }
 
 vk::raii::ShaderModule Renderer::createShaderModule(const std::vector<char>& code) const {
