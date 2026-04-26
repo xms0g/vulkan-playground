@@ -44,12 +44,23 @@ void Renderer::render() {
 	if (fenceResult != vk::Result::eSuccess) {
 		throw std::runtime_error("Failed to wait for fence!");
 	}
-	mDevice.resetFences(*mFences[mFrameIndex]);
 
 	auto [result, imageIndex] = mSwapChain.acquireNextImage(
 		UINT64_MAX,
 		*mPresentCompleteSemaphores[mFrameIndex],
 		nullptr);
+
+	if (result == vk::Result::eErrorOutOfDateKHR) {
+		recreateSwapchain();
+		return;
+	}
+
+	if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
+		assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
+		throw std::runtime_error("Failed to acquire swap chain image!");
+	}
+
+	mDevice.resetFences(*mFences[mFrameIndex]);
 
 	mCommandBuffers[mFrameIndex].reset();
 	recordCommandBuffer(imageIndex);
@@ -76,14 +87,11 @@ void Renderer::render() {
 	};
 
 	result = mGraphicsQueue.presentKHR(presentInfoKHR);
-	switch (result) {
-		case vk::Result::eSuccess:
-			break;
-		case vk::Result::eSuboptimalKHR:
-			std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n";
-			break;
-		default:
-			break; // an unexpected result is returned!
+	if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR || mWindow->windowResized()) {
+		mWindow->windowResized(false);
+		recreateSwapchain();
+	} else {
+		assert(result == vk::Result::eSuccess);
 	}
 
 	mFrameIndex = (mFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -280,6 +288,16 @@ void Renderer::createImageViews() {
 		imageViewCreateInfo.image = image;
 		mSwapChainImageViews.emplace_back(mDevice, imageViewCreateInfo);
 	}
+}
+
+void Renderer::recreateSwapchain() {
+	mDevice.waitIdle();
+
+	mSwapChainImageViews.clear();
+	mSwapChain = nullptr;
+
+	createSwapchain();
+	createImageViews();
 }
 
 void Renderer::createGraphicsPipeline() {

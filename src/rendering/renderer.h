@@ -30,6 +30,8 @@ private:
 
 	void createImageViews();
 
+	void recreateSwapchain();
+
 	void createGraphicsPipeline();
 
 	void createCommandPool();
