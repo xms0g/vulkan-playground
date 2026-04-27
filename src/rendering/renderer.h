@@ -75,7 +75,10 @@ private:
 
 	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
+	[[nodiscard]]
 	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
+
+	void copyBuffer(const vk::raii::Buffer &srcBuffer, const vk::raii::Buffer &dstBuffer, vk::DeviceSize size) const;
 
 	[[nodiscard]]
 	vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
@@ -96,13 +99,13 @@ private:
 	std::vector<vk::raii::ImageView> mSwapChainImageViews;
 	vk::raii::PipelineLayout mPipelineLayout{nullptr};
 	vk::raii::Pipeline mGraphicsPipeline{nullptr};
+	vk::raii::Buffer mVertexBuffer{nullptr};
+	vk::raii::DeviceMemory mVertexBufferMemory{nullptr};
 	vk::raii::CommandPool mCommandPool{nullptr};
 	std::vector<vk::raii::CommandBuffer> mCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
 	uint32_t mFrameIndex{0};
-	vk::raii::Buffer mVertexBuffer{nullptr};
-	vk::raii::DeviceMemory mVertexBufferMemory{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };

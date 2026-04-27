@@ -16,9 +16,9 @@
 #include "../io/filesystem.h"
 
 const std::vector<Vertex> vertices = {
-	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}},
 	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	{{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}
 };
 
 Renderer::Renderer() = default;
@@ -410,30 +410,44 @@ void Renderer::createCommandPool() {
 }
 
 void Renderer::createVertexBuffer(const size_t size) {
-	const vk::BufferCreateInfo bufferInfo{
+	const vk::BufferCreateInfo stagingInfo{
 		.size = size,
-		.usage = vk::BufferUsageFlagBits::eVertexBuffer,
+		.usage = vk::BufferUsageFlagBits::eTransferSrc,
 		.sharingMode = vk::SharingMode::eExclusive
 	};
+	const vk::raii::Buffer stagingBuffer(mDevice, stagingInfo);
+	const vk::MemoryRequirements memRequirementsStaging = stagingBuffer.getMemoryRequirements();
+	const vk::MemoryAllocateInfo memoryAllocateInfoStaging{
+		.allocationSize = memRequirementsStaging.size,
+		.memoryTypeIndex = findMemoryType(
+			memRequirementsStaging.memoryTypeBits,
+			vk::MemoryPropertyFlagBits::eHostVisible |
+			vk::MemoryPropertyFlagBits::eHostCoherent)
+	};
+	const vk::raii::DeviceMemory stagingBufferMemory(mDevice, memoryAllocateInfoStaging);
 
+	stagingBuffer.bindMemory(stagingBufferMemory, 0);
+	void* dataStaging = stagingBufferMemory.mapMemory(0, stagingInfo.size);
+	memcpy(dataStaging, vertices.data(), stagingInfo.size);
+	stagingBufferMemory.unmapMemory();
+
+	const vk::BufferCreateInfo bufferInfo{
+		.size = size,
+		.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+		.sharingMode = vk::SharingMode::eExclusive
+	};
 	mVertexBuffer = vk::raii::Buffer(mDevice, bufferInfo);
 
 	const vk::MemoryRequirements memRequirements = mVertexBuffer.getMemoryRequirements();
-
 	const vk::MemoryAllocateInfo memoryAllocateInfo{
 		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = findMemoryType(
-			memRequirements.memoryTypeBits,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)
+		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal)
 	};
 	mVertexBufferMemory = vk::raii::DeviceMemory(mDevice, memoryAllocateInfo);
 
 	mVertexBuffer.bindMemory(*mVertexBufferMemory, 0);
 
-	void* data = mVertexBufferMemory.mapMemory(0, bufferInfo.size);
-	memcpy(data, vertices.data(), bufferInfo.size);
-	mVertexBufferMemory.unmapMemory();
-
+	copyBuffer(stagingBuffer, mVertexBuffer, stagingInfo.size);
 }
 
 void Renderer::createCommandBuffers() {
@@ -703,6 +717,23 @@ uint32_t Renderer::findMemoryType(const uint32_t typeFilter, const vk::MemoryPro
 	}
 
 	throw std::runtime_error("Failed to find suitable memory type!");
+}
+
+void Renderer::copyBuffer(
+	const vk::raii::Buffer& srcBuffer,
+	const vk::raii::Buffer& dstBuffer,
+	const vk::DeviceSize size) const {
+	const vk::CommandBufferAllocateInfo allocInfo{
+		.commandPool = mCommandPool,
+		.level = vk::CommandBufferLevel::ePrimary,
+		.commandBufferCount = 1
+	};
+	const vk::raii::CommandBuffer commandCopyBuffer = std::move(mDevice.allocateCommandBuffers(allocInfo).front());
+	commandCopyBuffer.begin(vk::CommandBufferBeginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+	commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, size));
+	commandCopyBuffer.end();
+	mGraphicsQueue.submit(vk::SubmitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer}, nullptr);
+	mGraphicsQueue.waitIdle();
 }
 
 vk::raii::ShaderModule Renderer::createShaderModule(const std::vector<char>& code) const {
