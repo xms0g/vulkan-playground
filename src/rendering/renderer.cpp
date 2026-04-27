@@ -6,8 +6,11 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include <chrono>
 #include <unordered_set>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "deviceExtension.hpp"
 #include "validation.hpp"
 #include "mesh/vertex.hpp"
@@ -26,6 +29,12 @@ const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
 };
 
+struct UniformBufferObject {
+	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 view;
+	alignas(16) glm::mat4 proj;
+};
+
 Renderer::Renderer() = default;
 
 Renderer::~Renderer() = default;
@@ -41,10 +50,14 @@ int Renderer::init(Window* window) {
 		createLogicalDevice();
 		createSwapchain();
 		createImageViews();
+		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createCommandPool();
 		createVertexBuffer(sizeof(Vertex) * vertices.size());
 		createIndexBuffer(sizeof(uint16_t) * indices.size());
+		createUniformBuffers();
+		createDescriptorPool();
+		createDescriptorSets();
 		createCommandBuffers();
 		createSyncObjects();
 	} catch (const std::runtime_error& e) {
@@ -73,6 +86,8 @@ void Renderer::render() {
 		assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
 		throw std::runtime_error("Failed to acquire swap chain image!");
 	}
+
+	updateUniformBuffer(mFrameIndex);
 
 	mDevice.resetFences(*mFences[mFrameIndex]);
 
@@ -352,7 +367,7 @@ void Renderer::createGraphicsPipeline() {
 		.rasterizerDiscardEnable = vk::False,
 		.polygonMode = vk::PolygonMode::eFill,
 		.cullMode = vk::CullModeFlagBits::eBack,
-		.frontFace = vk::FrontFace::eClockwise,
+		.frontFace = vk::FrontFace::eCounterClockwise,
 		.depthBiasEnable = vk::False,
 		.lineWidth = 1.0f
 	};
@@ -380,7 +395,11 @@ void Renderer::createGraphicsPipeline() {
 		.pDynamicStates = dynamicStates.data()
 	};
 
-	vk::PipelineLayoutCreateInfo pipelineLayoutInfo{.setLayoutCount = 0, .pushConstantRangeCount = 0};
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
+		.setLayoutCount = 1,
+		.pSetLayouts = &*mDescriptorSetLayout,
+		.pushConstantRangeCount = 0
+	};
 	mPipelineLayout = vk::raii::PipelineLayout(mDevice, pipelineLayoutInfo);
 
 	vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {
@@ -464,6 +483,84 @@ void Renderer::createIndexBuffer(const vk::DeviceSize size) {
 	copyBuffer(stagingBuffer, mIndexBuffer, size);
 }
 
+void Renderer::createUniformBuffers() {
+	mUniformBuffers.clear();
+	mUniformBuffersMemory.clear();
+	mUniformBuffersMapped.clear();
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+		constexpr vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
+		vk::raii::Buffer buffer({});
+		vk::raii::DeviceMemory bufferMem({});
+		createBuffer(
+			bufferSize,
+			vk::BufferUsageFlagBits::eUniformBuffer,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			buffer,
+			bufferMem);
+
+		mUniformBuffers.emplace_back(std::move(buffer));
+		mUniformBuffersMemory.emplace_back(std::move(bufferMem));
+		mUniformBuffersMapped.emplace_back(mUniformBuffersMemory[i].mapMemory(0, bufferSize));
+	}
+}
+
+void Renderer::createDescriptorPool() {
+	constexpr vk::DescriptorPoolSize poolSize{vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT};
+	const vk::DescriptorPoolCreateInfo poolInfo{
+		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+		.maxSets = MAX_FRAMES_IN_FLIGHT,
+		.poolSizeCount = 1,
+		.pPoolSizes = &poolSize
+	};
+
+	mDescriptorPool = vk::raii::DescriptorPool(mDevice, poolInfo);
+}
+
+void Renderer::createDescriptorSets() {
+	std::vector<vk::DescriptorSetLayout> layouts{MAX_FRAMES_IN_FLIGHT, *mDescriptorSetLayout};
+	const vk::DescriptorSetAllocateInfo allocInfo{
+		.descriptorPool = mDescriptorPool,
+		.descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+		.pSetLayouts = layouts.data()
+	};
+
+	mDescriptorSets.clear();
+	mDescriptorSets = mDevice.allocateDescriptorSets(allocInfo);
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+		vk::DescriptorBufferInfo bufferInfo{
+			.buffer = mUniformBuffers[i],
+			.offset = 0,
+			.range = sizeof(UniformBufferObject)
+		};
+
+		vk::WriteDescriptorSet descriptorWrite{
+			.dstSet = mDescriptorSets[i],
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
+			.pBufferInfo = &bufferInfo
+		};
+
+		mDevice.updateDescriptorSets(descriptorWrite, {});
+	}
+}
+
+void Renderer::createDescriptorSetLayout() {
+	vk::DescriptorSetLayoutBinding uboLayoutBinding{
+		0,
+		vk::DescriptorType::eUniformBuffer,
+		1,
+		vk::ShaderStageFlagBits::eVertex,
+		nullptr
+	};
+
+	const vk::DescriptorSetLayoutCreateInfo layoutInfo{.bindingCount = 1, .pBindings = &uboLayoutBinding};
+	mDescriptorSetLayout = vk::raii::DescriptorSetLayout(mDevice, layoutInfo);
+}
+
 void Renderer::createBuffer(
 	const vk::DeviceSize size,
 	const vk::BufferUsageFlags usage,
@@ -539,6 +636,12 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 
 	commandBuffer.bindVertexBuffers(0, {mVertexBuffer}, {0});
 	commandBuffer.bindIndexBuffer(*mIndexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
+	commandBuffer.bindDescriptorSets(
+		vk::PipelineBindPoint::eGraphics,
+		mPipelineLayout,
+		0,
+		*mDescriptorSets[mFrameIndex],
+		nullptr);
 	commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 	commandBuffer.endRendering();
 
@@ -768,6 +871,25 @@ void Renderer::copyBuffer(
 	commandCopyBuffer.end();
 	mGraphicsQueue.submit(vk::SubmitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandCopyBuffer}, nullptr);
 	mGraphicsQueue.waitIdle();
+}
+
+void Renderer::updateUniformBuffer(const uint32_t currentImage) const {
+	static auto startTime = std::chrono::high_resolution_clock::now();
+
+	const auto currentTime = std::chrono::high_resolution_clock::now();
+	const float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+	UniformBufferObject ubo{};
+	ubo.model = rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(
+		glm::radians(45.0f),
+		static_cast<float>(mSwapChainExtent.width) / static_cast<float>(mSwapChainExtent.height),
+		0.1f,
+		10.0f);
+	ubo.proj[1][1] *= -1;
+
+	memcpy(mUniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 vk::raii::ShaderModule Renderer::createShaderModule(const std::vector<char>& code) const {

@@ -40,6 +40,14 @@ private:
 
 	void createIndexBuffer(vk::DeviceSize size);
 
+	void createUniformBuffers();
+
+	void createDescriptorPool();
+
+	void createDescriptorSets();
+
+	void createDescriptorSetLayout();
+
 	void createBuffer(
 		vk::DeviceSize size,
 		vk::BufferUsageFlags usage,
@@ -89,6 +97,8 @@ private:
 
 	void copyBuffer(const vk::raii::Buffer &srcBuffer, const vk::raii::Buffer &dstBuffer, vk::DeviceSize size) const;
 
+	void updateUniformBuffer(uint32_t currentImage) const;
+
 	[[nodiscard]]
 	vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
 
@@ -106,12 +116,18 @@ private:
 	vk::Extent2D mSwapChainExtent;
 	std::vector<vk::Image> mSwapChainImages;
 	std::vector<vk::raii::ImageView> mSwapChainImageViews;
+	vk::raii::DescriptorSetLayout mDescriptorSetLayout{nullptr};
+	vk::raii::DescriptorPool mDescriptorPool{nullptr};
+	std::vector<vk::raii::DescriptorSet> mDescriptorSets;
 	vk::raii::PipelineLayout mPipelineLayout{nullptr};
 	vk::raii::Pipeline mGraphicsPipeline{nullptr};
 	vk::raii::Buffer mVertexBuffer{nullptr};
 	vk::raii::DeviceMemory mVertexBufferMemory{nullptr};
 	vk::raii::Buffer mIndexBuffer{nullptr};
 	vk::raii::DeviceMemory mIndexBufferMemory{nullptr};
+	std::vector<vk::raii::Buffer> mUniformBuffers;
+	std::vector<vk::raii::DeviceMemory> mUniformBuffersMemory;
+	std::vector<void*> mUniformBuffersMapped;
 	vk::raii::CommandPool mCommandPool{nullptr};
 	std::vector<vk::raii::CommandBuffer> mCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
