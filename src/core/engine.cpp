@@ -29,8 +29,10 @@ void Engine::processInput() {
 }
 
 void Engine::update() {
-	mDeltaTime = (glfwGetTime() - mMillisecsPreviousFrame) / 1000.0f;
-	mMillisecsPreviousFrame = glfwGetTime();
+	const double currentTime = glfwGetTime();
+	mDeltaTime = static_cast<float>(currentTime - mSecondsPreviousFrame);
+	mSecondsPreviousFrame = currentTime;
+
 	mWindow->updateFpsCounter(mDeltaTime);
 }
 

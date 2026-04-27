@@ -33,7 +33,7 @@ void Window::framebufferResizeCallback(GLFWwindow* window, int width, int height
 	}
 }
 
-void Window::initImpl(const char* title, int width, int height, bool fullscreen) {
+void Window::initImpl(const char* title, const int width, const int height, bool fullscreen) {
 	m_title = title;
 
 	if (glfwInit() != GLFW_TRUE) {
@@ -52,18 +52,18 @@ void Window::clearImpl(float r, float g, float b, float a) {
 }
 
 void Window::updateFpsCounter(const double dt) {
-	m_currentSeconds += dt;
-	double elapsedSeconds = m_currentSeconds - m_previousSeconds;
+	mCurrentSeconds += dt;
+	double elapsedSeconds = mCurrentSeconds - mPreviousSeconds;
 	/* limit text updates to 4 per second */
 	if (elapsedSeconds > 0.25) {
-		m_previousSeconds = m_currentSeconds;
+		mPreviousSeconds = mCurrentSeconds;
 		char tmp[128];
-		const double fps = static_cast<double>(m_frameCount) / elapsedSeconds;
+		const double fps = static_cast<double>(mFrameCount) / elapsedSeconds;
 
 		snprintf(tmp, 128, "%s @ fps: %.2f", m_title.c_str(), fps);
 
 		glfwSetWindowTitle(mWindow, tmp);
-		m_frameCount = 0;
+		mFrameCount = 0;
 	}
-	m_frameCount++;
+	mFrameCount++;
 }

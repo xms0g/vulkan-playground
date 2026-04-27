@@ -29,9 +29,9 @@ protected:
 
 	std::string m_title;
 
-	double m_previousSeconds{};
-	double m_currentSeconds{};
-	int m_frameCount{};
+	double mPreviousSeconds{0.0};
+	double mCurrentSeconds{0.0};
+	int mFrameCount{0};
 
 private:
 	static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
