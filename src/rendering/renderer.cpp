@@ -16,9 +16,14 @@
 #include "../io/filesystem.h"
 
 const std::vector<Vertex> vertices = {
-	{{0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const std::vector<uint16_t> indices = {
+	0, 1, 2, 2, 3, 0
 };
 
 Renderer::Renderer() = default;
@@ -39,6 +44,7 @@ int Renderer::init(Window* window) {
 		createGraphicsPipeline();
 		createCommandPool();
 		createVertexBuffer(sizeof(Vertex) * vertices.size());
+		createIndexBuffer(sizeof(uint16_t) * indices.size());
 		createCommandBuffers();
 		createSyncObjects();
 	} catch (const std::runtime_error& e) {
@@ -409,45 +415,72 @@ void Renderer::createCommandPool() {
 	mCommandPool = vk::raii::CommandPool(mDevice, poolInfo);
 }
 
-void Renderer::createVertexBuffer(const size_t size) {
-	const vk::BufferCreateInfo stagingInfo{
-		.size = size,
-		.usage = vk::BufferUsageFlagBits::eTransferSrc,
-		.sharingMode = vk::SharingMode::eExclusive
-	};
-	const vk::raii::Buffer stagingBuffer(mDevice, stagingInfo);
-	const vk::MemoryRequirements memRequirementsStaging = stagingBuffer.getMemoryRequirements();
-	const vk::MemoryAllocateInfo memoryAllocateInfoStaging{
-		.allocationSize = memRequirementsStaging.size,
-		.memoryTypeIndex = findMemoryType(
-			memRequirementsStaging.memoryTypeBits,
-			vk::MemoryPropertyFlagBits::eHostVisible |
-			vk::MemoryPropertyFlagBits::eHostCoherent)
-	};
-	const vk::raii::DeviceMemory stagingBufferMemory(mDevice, memoryAllocateInfoStaging);
+void Renderer::createVertexBuffer(const vk::DeviceSize size) {
+	vk::raii::Buffer stagingBuffer({});
+	vk::raii::DeviceMemory stagingBufferMemory({});
 
-	stagingBuffer.bindMemory(stagingBufferMemory, 0);
-	void* dataStaging = stagingBufferMemory.mapMemory(0, stagingInfo.size);
-	memcpy(dataStaging, vertices.data(), stagingInfo.size);
+	createBuffer(
+		size,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		stagingBuffer, stagingBufferMemory);
+
+	void* dataStaging = stagingBufferMemory.mapMemory(0, size);
+	memcpy(dataStaging, vertices.data(), size);
 	stagingBufferMemory.unmapMemory();
 
-	const vk::BufferCreateInfo bufferInfo{
-		.size = size,
-		.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-		.sharingMode = vk::SharingMode::eExclusive
-	};
-	mVertexBuffer = vk::raii::Buffer(mDevice, bufferInfo);
+	createBuffer(
+		size,
+		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		mVertexBuffer,
+		mVertexBufferMemory);
 
-	const vk::MemoryRequirements memRequirements = mVertexBuffer.getMemoryRequirements();
-	const vk::MemoryAllocateInfo memoryAllocateInfo{
+	copyBuffer(stagingBuffer, mVertexBuffer, size);
+}
+
+void Renderer::createIndexBuffer(const vk::DeviceSize size) {
+	vk::raii::Buffer stagingBuffer({});
+	vk::raii::DeviceMemory stagingBufferMemory({});
+
+	createBuffer(
+		size,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		stagingBuffer,
+		stagingBufferMemory);
+
+	void* data = stagingBufferMemory.mapMemory(0, size);
+	memcpy(data, indices.data(), (size_t) size);
+	stagingBufferMemory.unmapMemory();
+
+	createBuffer(
+		size,
+		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		mIndexBuffer,
+		mIndexBufferMemory);
+
+	copyBuffer(stagingBuffer, mIndexBuffer, size);
+}
+
+void Renderer::createBuffer(
+	const vk::DeviceSize size,
+	const vk::BufferUsageFlags usage,
+	const vk::MemoryPropertyFlags properties,
+	vk::raii::Buffer& buffer,
+	vk::raii::DeviceMemory& bufferMemory) const {
+	const vk::BufferCreateInfo bufferInfo{.size = size, .usage = usage, .sharingMode = vk::SharingMode::eExclusive};
+	buffer = vk::raii::Buffer(mDevice, bufferInfo);
+
+	const vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
+	const vk::MemoryAllocateInfo allocInfo{
 		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal)
+		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties)
 	};
-	mVertexBufferMemory = vk::raii::DeviceMemory(mDevice, memoryAllocateInfo);
 
-	mVertexBuffer.bindMemory(*mVertexBufferMemory, 0);
-
-	copyBuffer(stagingBuffer, mVertexBuffer, stagingInfo.size);
+	bufferMemory = vk::raii::DeviceMemory(mDevice, allocInfo);
+	buffer.bindMemory(bufferMemory, 0);
 }
 
 void Renderer::createCommandBuffers() {
@@ -494,18 +527,19 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 
 	commandBuffer.beginRendering(renderingInfo);
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *mGraphicsPipeline);
-	commandBuffer.bindVertexBuffers(0, {mVertexBuffer}, {0});
-
 	commandBuffer.setViewport(
 		0,
-		vk::Viewport(0.0f, 0.0f,
-		             static_cast<float>(mSwapChainExtent.width),
-		             static_cast<float>(mSwapChainExtent.height),
-		             0.0f, 1.0f)
+		vk::Viewport(
+			0.0f, 0.0f,
+			static_cast<float>(mSwapChainExtent.width),
+			static_cast<float>(mSwapChainExtent.height),
+			0.0f, 1.0f)
 	);
 	commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapChainExtent));
 
-	commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+	commandBuffer.bindVertexBuffers(0, {mVertexBuffer}, {0});
+	commandBuffer.bindIndexBuffer(*mIndexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
+	commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
 	commandBuffer.endRendering();
 
 	// After rendering, transition the swapchain image to vk::ImageLayout::ePresentSrcKHR

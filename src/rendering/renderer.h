@@ -36,7 +36,16 @@ private:
 
 	void createCommandPool();
 
-	void createVertexBuffer(size_t size);
+	void createVertexBuffer(vk::DeviceSize size);
+
+	void createIndexBuffer(vk::DeviceSize size);
+
+	void createBuffer(
+		vk::DeviceSize size,
+		vk::BufferUsageFlags usage,
+		vk::MemoryPropertyFlags properties,
+		vk::raii::Buffer &buffer,
+		vk::raii::DeviceMemory &bufferMemory) const;
 
 	void createCommandBuffers();
 
@@ -101,6 +110,8 @@ private:
 	vk::raii::Pipeline mGraphicsPipeline{nullptr};
 	vk::raii::Buffer mVertexBuffer{nullptr};
 	vk::raii::DeviceMemory mVertexBufferMemory{nullptr};
+	vk::raii::Buffer mIndexBuffer{nullptr};
+	vk::raii::DeviceMemory mIndexBufferMemory{nullptr};
 	vk::raii::CommandPool mCommandPool{nullptr};
 	std::vector<vk::raii::CommandBuffer> mCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
