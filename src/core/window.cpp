@@ -44,6 +44,7 @@ void Window::initImpl(const char* title, const int width, const int height, bool
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	mWindow = glfwCreateWindow(width, height, title, nullptr, nullptr);
+
 	glfwSetWindowUserPointer(mWindow, this);
 	glfwSetFramebufferSizeCallback(mWindow, framebufferResizeCallback);
 }

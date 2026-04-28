@@ -402,7 +402,9 @@ void Renderer::createGraphicsPipeline() {
 	};
 	mPipelineLayout = vk::raii::PipelineLayout(mDevice, pipelineLayoutInfo);
 
-	vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {
+	vk::StructureChain<
+		vk::GraphicsPipelineCreateInfo,
+		vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {
 		{
 			.stageCount = 2,
 			.pStages = shaderStages,
@@ -549,12 +551,12 @@ void Renderer::createDescriptorSets() {
 }
 
 void Renderer::createDescriptorSetLayout() {
-	vk::DescriptorSetLayoutBinding uboLayoutBinding{
-		0,
-		vk::DescriptorType::eUniformBuffer,
-		1,
-		vk::ShaderStageFlagBits::eVertex,
-		nullptr
+	constexpr vk::DescriptorSetLayoutBinding uboLayoutBinding{
+		.binding = 0,
+		.descriptorType = vk::DescriptorType::eUniformBuffer,
+		.descriptorCount = 1,
+		.stageFlags = vk::ShaderStageFlagBits::eVertex,
+		.pImmutableSamplers = nullptr
 	};
 
 	const vk::DescriptorSetLayoutCreateInfo layoutInfo{.bindingCount = 1, .pBindings = &uboLayoutBinding};
@@ -837,7 +839,7 @@ vk::Extent2D Renderer::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabi
 uint32_t Renderer::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities) {
 	auto minImageCount = std::max(3u, surfaceCapabilities.minImageCount);
 
-	if ((0 < surfaceCapabilities.maxImageCount) && (surfaceCapabilities.maxImageCount < minImageCount)) {
+	if ((surfaceCapabilities.maxImageCount > 0) && (surfaceCapabilities.maxImageCount < minImageCount)) {
 		minImageCount = surfaceCapabilities.maxImageCount;
 	}
 
