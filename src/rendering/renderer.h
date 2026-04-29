@@ -28,7 +28,7 @@ private:
 
 	void createSwapchain();
 
-	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format) const;
+	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags) const;
 
 	void createImageViews();
 

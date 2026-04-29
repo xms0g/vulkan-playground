@@ -20,10 +20,10 @@
 #include "image/stb_image.h"
 
 const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
@@ -57,13 +57,13 @@ int Renderer::init(Window* window) {
 		createVertexBuffer(sizeof(Vertex) * vertices.size());
 		createIndexBuffer(sizeof(uint16_t) * indices.size());
 		createUniformBuffers();
+		createTextureImage(fs::path(ASSET_DIR + "textures/brickwall.jpg").c_str());
+		createTextureImageView();
+		createTextureSampler();
 		createDescriptorPool();
 		createDescriptorSets();
 		createCommandBuffers();
 		createSyncObjects();
-		createTextureImage(fs::path(ASSET_DIR + "textures/brickwall.jpg").c_str());
-		createTextureImageView();
-		createTextureSampler();
 	} catch (const std::runtime_error& e) {
 		throw std::runtime_error(e.what());
 	}
@@ -302,12 +302,15 @@ void Renderer::createSwapchain() {
 	mSwapChainImages = mSwapChain.getImages();
 }
 
-vk::raii::ImageView Renderer::createImageView(const vk::Image& image, const vk::Format format) const {
+vk::raii::ImageView Renderer::createImageView(
+	const vk::Image& image,
+	const vk::Format format,
+	const vk::ImageAspectFlags aspectFlags) const {
 	const vk::ImageViewCreateInfo viewInfo{
 		.image = image,
 		.viewType = vk::ImageViewType::e2D,
 		.format = format,
-		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
+		.subresourceRange = {aspectFlags, 0, 1, 0, 1}
 	};
 
 	return vk::raii::ImageView(mDevice, viewInfo);
@@ -317,7 +320,8 @@ void Renderer::createImageViews() {
 	mSwapChainImageViews.reserve(mSwapChainImages.size());
 
 	for (const auto& image: mSwapChainImages) {
-		mSwapChainImageViews.push_back(createImageView(image, mSwapChainSurfaceFormat.format));
+		mSwapChainImageViews.push_back(
+			createImageView(image, mSwapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor));
 	}
 }
 
@@ -511,12 +515,15 @@ void Renderer::createUniformBuffers() {
 }
 
 void Renderer::createDescriptorPool() {
-	constexpr vk::DescriptorPoolSize poolSize{vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT};
+	constexpr std::array<vk::DescriptorPoolSize, 2> poolSizes = {
+		vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT},
+		vk::DescriptorPoolSize{vk::DescriptorType::eCombinedImageSampler, MAX_FRAMES_IN_FLIGHT}
+	};
 	const vk::DescriptorPoolCreateInfo poolInfo{
 		.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 		.maxSets = MAX_FRAMES_IN_FLIGHT,
-		.poolSizeCount = 1,
-		.pPoolSizes = &poolSize
+		.poolSizeCount = poolSizes.size(),
+		.pPoolSizes = poolSizes.data()
 	};
 
 	mDescriptorPool = vk::raii::DescriptorPool(mDevice, poolInfo);
@@ -540,29 +547,54 @@ void Renderer::createDescriptorSets() {
 			.range = sizeof(UniformBufferObject)
 		};
 
-		vk::WriteDescriptorSet descriptorWrite{
-			.dstSet = mDescriptorSets[i],
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorCount = 1,
-			.descriptorType = vk::DescriptorType::eUniformBuffer,
-			.pBufferInfo = &bufferInfo
+		vk::DescriptorImageInfo imageInfo{
+			.sampler = mTextureSampler,
+			.imageView = mTextureImageView,
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 		};
 
-		mDevice.updateDescriptorSets(descriptorWrite, {});
+		std::array<vk::WriteDescriptorSet, 2> descriptorWrites = {
+			vk::WriteDescriptorSet{
+				.dstSet = mDescriptorSets[i],
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.pBufferInfo = &bufferInfo
+			},
+			vk::WriteDescriptorSet{
+				.dstSet = mDescriptorSets[i],
+				.dstBinding = 1,
+				.dstArrayElement = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+				.pImageInfo = &imageInfo
+			}
+		};
+
+		mDevice.updateDescriptorSets(descriptorWrites, {});
 	}
 }
 
 void Renderer::createDescriptorSetLayout() {
-	constexpr vk::DescriptorSetLayoutBinding uboLayoutBinding{
-		.binding = 0,
-		.descriptorType = vk::DescriptorType::eUniformBuffer,
-		.descriptorCount = 1,
-		.stageFlags = vk::ShaderStageFlagBits::eVertex,
-		.pImmutableSamplers = nullptr
+	constexpr std::array<vk::DescriptorSetLayoutBinding, 2> bindings = {
+		vk::DescriptorSetLayoutBinding{
+			.binding = 0,
+			.descriptorType = vk::DescriptorType::eUniformBuffer,
+			.descriptorCount = 1,
+			.stageFlags = vk::ShaderStageFlagBits::eVertex,
+			.pImmutableSamplers = nullptr
+		},
+		vk::DescriptorSetLayoutBinding{
+			.binding = 1,
+			.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+			.descriptorCount = 1,
+			.stageFlags = vk::ShaderStageFlagBits::eFragment,
+			.pImmutableSamplers = nullptr
+		}
 	};
 
-	const vk::DescriptorSetLayoutCreateInfo layoutInfo{.bindingCount = 1, .pBindings = &uboLayoutBinding};
+	const vk::DescriptorSetLayoutCreateInfo layoutInfo{.bindingCount = bindings.size(), .pBindings = bindings.data()};
 	mDescriptorSetLayout = vk::raii::DescriptorSetLayout(mDevice, layoutInfo);
 }
 
@@ -823,7 +855,7 @@ bool Renderer::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 		vk::PhysicalDeviceVulkan13Features,
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
-	// 3. Perform the checks with clear boolean logic
+	// Perform the checks with clear boolean logic
 	bool supportsSamplerAnisotropy = features2.get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
 	bool supportsShaderDrawParameters = features2.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters;
 	bool supportsDynamicRendering = features2.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering;
@@ -1027,7 +1059,7 @@ void Renderer::createImage(
 }
 
 void Renderer::createTextureImageView() {
-	mTextureImageView = createImageView(mTextureImage, vk::Format::eR8G8B8A8Srgb);
+	mTextureImageView = createImageView(mTextureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor);
 }
 
 void Renderer::createTextureSampler() {
