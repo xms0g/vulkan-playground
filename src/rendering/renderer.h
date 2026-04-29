@@ -28,6 +28,8 @@ private:
 
 	void createSwapchain();
 
+	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format) const;
+
 	void createImageViews();
 
 	void recreateSwapchain();
@@ -52,8 +54,8 @@ private:
 		vk::DeviceSize size,
 		vk::BufferUsageFlags usage,
 		vk::MemoryPropertyFlags properties,
-		vk::raii::Buffer &buffer,
-		vk::raii::DeviceMemory &bufferMemory) const;
+		vk::raii::Buffer& buffer,
+		vk::raii::DeviceMemory& bufferMemory) const;
 
 	void createCommandBuffers();
 
@@ -67,6 +69,8 @@ private:
 		vk::AccessFlags2 dstAccessMask,
 		vk::PipelineStageFlags2 srcStageMask,
 		vk::PipelineStageFlags2 dstStageMask) const;
+
+	void transitionImageLayout(const vk::raii::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout) const;
 
 	void createSyncObjects();
 
@@ -95,12 +99,34 @@ private:
 	[[nodiscard]]
 	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
-	void copyBuffer(const vk::raii::Buffer &srcBuffer, const vk::raii::Buffer &dstBuffer, vk::DeviceSize size) const;
+	void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size) const;
+
+	void copyBufferToImage(const vk::raii::Buffer& buffer, const vk::raii::Image& image, uint32_t width, uint32_t height) const;
 
 	void updateUniformBuffer(uint32_t currentImage) const;
 
 	[[nodiscard]]
 	vk::raii::ShaderModule createShaderModule(const std::vector<char>& code) const;
+
+	void createTextureImage(const char* path);
+
+	void createImage(
+		uint32_t width,
+		uint32_t height,
+		vk::Format format,
+		vk::ImageTiling tiling,
+		vk::ImageUsageFlags usage,
+		vk::MemoryPropertyFlags properties,
+		vk::raii::Image& image,
+		vk::raii::DeviceMemory& imageMemory) const;
+
+	void createTextureImageView();
+
+	void createTextureSampler();
+
+	vk::raii::CommandBuffer beginSingleTimeCommands() const;
+
+	void endSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
 
 	Window* mWindow{nullptr};
 
@@ -134,5 +160,9 @@ private:
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
 	uint32_t mFrameIndex{0};
+	vk::raii::Image mTextureImage{nullptr};
+	vk::raii::DeviceMemory mTextureImageMemory{nullptr};
+	vk::raii::ImageView mTextureImageView{nullptr};
+	vk::raii::Sampler mTextureSampler{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
