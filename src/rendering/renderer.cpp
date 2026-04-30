@@ -57,7 +57,7 @@ int Renderer::init(Window* window) {
 		getPhysicalDevice();
 		createLogicalDevice();
 		createSwapchain();
-		createImageViews();
+		createSwapchainImageViews();
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createCommandPool();
@@ -310,26 +310,18 @@ void Renderer::createSwapchain() {
 	mSwapChainImages = mSwapChain.getImages();
 }
 
-vk::raii::ImageView Renderer::createImageView(
-	const vk::Image& image,
-	const vk::Format format,
-	const vk::ImageAspectFlags aspectFlags) const {
-	const vk::ImageViewCreateInfo viewInfo{
-		.image = image,
+void Renderer::createSwapchainImageViews() {
+	assert(mSwapChainImageViews.empty());
+
+	vk::ImageViewCreateInfo imageViewCreateInfo{
 		.viewType = vk::ImageViewType::e2D,
-		.format = format,
-		.subresourceRange = {aspectFlags, 0, 1, 0, 1}
+		.format = mSwapChainSurfaceFormat.format,
+		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
 	};
 
-	return vk::raii::ImageView(mDevice, viewInfo);
-}
-
-void Renderer::createImageViews() {
-	mSwapChainImageViews.reserve(mSwapChainImages.size());
-
 	for (const auto& image: mSwapChainImages) {
-		mSwapChainImageViews.push_back(
-			createImageView(image, mSwapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor));
+		imageViewCreateInfo.image = image;
+		mSwapChainImageViews.emplace_back(mDevice, imageViewCreateInfo);
 	}
 }
 
@@ -340,7 +332,7 @@ void Renderer::recreateSwapchain() {
 	mSwapChain = nullptr;
 
 	createSwapchain();
-	createImageViews();
+	createSwapchainImageViews();
 	createDepthResources();
 }
 
@@ -749,80 +741,6 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 	commandBuffer.end();
 }
 
-void Renderer::transitionImageLayout(
-	const vk::Image image,
-	const vk::ImageLayout oldLayout,
-	const vk::ImageLayout newLayout,
-	const vk::AccessFlags2 srcAccessMask,
-	const vk::AccessFlags2 dstAccessMask,
-	const vk::PipelineStageFlags2 srcStageMask,
-	const vk::PipelineStageFlags2 dstStageMask,
-	const vk::ImageAspectFlags aspectFlags) const {
-	vk::ImageMemoryBarrier2 barrier = {
-		.srcStageMask = srcStageMask,
-		.srcAccessMask = srcAccessMask,
-		.dstStageMask = dstStageMask,
-		.dstAccessMask = dstAccessMask,
-		.oldLayout = oldLayout,
-		.newLayout = newLayout,
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = image,
-		.subresourceRange = {
-			.aspectMask = aspectFlags,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		}
-	};
-
-	const vk::DependencyInfo dependency_info = {
-		.dependencyFlags = {},
-		.imageMemoryBarrierCount = 1,
-		.pImageMemoryBarriers = &barrier
-	};
-
-	mCommandBuffers[mFrameIndex].pipelineBarrier2(dependency_info);
-}
-
-void Renderer::transitionImageLayout(
-	const vk::raii::Image& image,
-	const vk::ImageLayout oldLayout,
-	const vk::ImageLayout newLayout) const {
-	const auto commandBuffer = beginSingleTimeCommands();
-	//TODO: Legacy api. should be exchanged with ImageMemoryBarrier2
-	vk::ImageMemoryBarrier barrier{
-		.oldLayout = oldLayout,
-		.newLayout = newLayout,
-		.image = image,
-		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-	};
-
-	vk::PipelineStageFlags sourceStage;
-	vk::PipelineStageFlags destinationStage;
-
-	if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-		barrier.srcAccessMask = {};
-		barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-		sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-		destinationStage = vk::PipelineStageFlagBits::eTransfer;
-	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
-	           newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-		barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-		sourceStage = vk::PipelineStageFlagBits::eTransfer;
-		destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-	} else {
-		throw std::invalid_argument("Unsupported layout transition!");
-	}
-	commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
-
-	endSingleTimeCommands(commandBuffer);
-}
-
 void Renderer::createSyncObjects() {
 	assert(
 		mPresentCompleteSemaphores.empty() &&
@@ -1140,6 +1058,20 @@ void Renderer::createImage(
 	image.bindMemory(imageMemory, 0);
 }
 
+vk::raii::ImageView Renderer::createImageView(
+	const vk::raii::Image& image,
+	const vk::Format format,
+	const vk::ImageAspectFlags aspectFlags) const {
+	const vk::ImageViewCreateInfo viewInfo{
+		.image = image,
+		.viewType = vk::ImageViewType::e2D,
+		.format = format,
+		.subresourceRange = {aspectFlags, 0, 1, 0, 1}
+	};
+
+	return vk::raii::ImageView(mDevice, viewInfo);
+}
+
 void Renderer::createTextureImageView() {
 	mTextureImageView = createImageView(mTextureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor);
 }
@@ -1161,6 +1093,80 @@ void Renderer::createTextureSampler() {
 	};
 
 	mTextureSampler = vk::raii::Sampler(mDevice, samplerInfo);
+}
+
+void Renderer::transitionImageLayout(
+	const vk::Image image,
+	const vk::ImageLayout oldLayout,
+	const vk::ImageLayout newLayout,
+	const vk::AccessFlags2 srcAccessMask,
+	const vk::AccessFlags2 dstAccessMask,
+	const vk::PipelineStageFlags2 srcStageMask,
+	const vk::PipelineStageFlags2 dstStageMask,
+	const vk::ImageAspectFlags aspectFlags) const {
+	vk::ImageMemoryBarrier2 barrier = {
+		.srcStageMask = srcStageMask,
+		.srcAccessMask = srcAccessMask,
+		.dstStageMask = dstStageMask,
+		.dstAccessMask = dstAccessMask,
+		.oldLayout = oldLayout,
+		.newLayout = newLayout,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = image,
+		.subresourceRange = {
+			.aspectMask = aspectFlags,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+
+	const vk::DependencyInfo dependency_info = {
+		.dependencyFlags = {},
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &barrier
+	};
+
+	mCommandBuffers[mFrameIndex].pipelineBarrier2(dependency_info);
+}
+
+void Renderer::transitionImageLayout(
+	const vk::raii::Image& image,
+	const vk::ImageLayout oldLayout,
+	const vk::ImageLayout newLayout) const {
+	const auto commandBuffer = beginSingleTimeCommands();
+	//TODO: Legacy api. should be exchanged with ImageMemoryBarrier2
+	vk::ImageMemoryBarrier barrier{
+		.oldLayout = oldLayout,
+		.newLayout = newLayout,
+		.image = image,
+		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
+	};
+
+	vk::PipelineStageFlags sourceStage;
+	vk::PipelineStageFlags destinationStage;
+
+	if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
+		barrier.srcAccessMask = {};
+		barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
+		sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+		destinationStage = vk::PipelineStageFlagBits::eTransfer;
+	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
+	           newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+		sourceStage = vk::PipelineStageFlagBits::eTransfer;
+		destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+	} else {
+		throw std::invalid_argument("Unsupported layout transition!");
+	}
+	commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
+
+	endSingleTimeCommands(commandBuffer);
 }
 
 vk::raii::CommandBuffer Renderer::beginSingleTimeCommands() const {

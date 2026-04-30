@@ -28,10 +28,7 @@ private:
 
 	void createSwapchain();
 
-	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format,
-	                                    vk::ImageAspectFlags aspectFlags) const;
-
-	void createImageViews();
+	void createSwapchainImageViews();
 
 	void recreateSwapchain();
 
@@ -63,21 +60,6 @@ private:
 	void createCommandBuffers();
 
 	void recordCommandBuffer(uint32_t imageIndex) const;
-
-	void transitionImageLayout(
-		vk::Image image,
-		vk::ImageLayout oldLayout,
-		vk::ImageLayout newLayout,
-		vk::AccessFlags2 srcAccessMask,
-		vk::AccessFlags2 dstAccessMask,
-		vk::PipelineStageFlags2 srcStageMask,
-		vk::PipelineStageFlags2 dstStageMask,
-		vk::ImageAspectFlags aspectFlags) const;
-
-	void transitionImageLayout(
-		const vk::raii::Image& image,
-		vk::ImageLayout oldLayout,
-		vk::ImageLayout newLayout) const;
 
 	void createSyncObjects();
 
@@ -137,9 +119,29 @@ private:
 		vk::raii::Image& image,
 		vk::raii::DeviceMemory& imageMemory) const;
 
+	vk::raii::ImageView createImageView(
+		const vk::raii::Image& image,
+		vk::Format format,
+		vk::ImageAspectFlags aspectFlags) const;
+
 	void createTextureImageView();
 
 	void createTextureSampler();
+
+	void transitionImageLayout(
+		vk::Image image,
+		vk::ImageLayout oldLayout,
+		vk::ImageLayout newLayout,
+		vk::AccessFlags2 srcAccessMask,
+		vk::AccessFlags2 dstAccessMask,
+		vk::PipelineStageFlags2 srcStageMask,
+		vk::PipelineStageFlags2 dstStageMask,
+		vk::ImageAspectFlags aspectFlags) const;
+
+	void transitionImageLayout(
+		const vk::raii::Image& image,
+		vk::ImageLayout oldLayout,
+		vk::ImageLayout newLayout) const;
 
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
 
