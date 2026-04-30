@@ -136,7 +136,8 @@ private:
 		vk::AccessFlags2 dstAccessMask,
 		vk::PipelineStageFlags2 srcStageMask,
 		vk::PipelineStageFlags2 dstStageMask,
-		vk::ImageAspectFlags aspectFlags) const;
+		vk::ImageAspectFlags aspectFlags,
+		const vk::raii::CommandBuffer& commandBuffer) const;
 
 	void transitionImageLayout(
 		const vk::raii::Image& image,

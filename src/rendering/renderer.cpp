@@ -671,7 +671,8 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		vk::AccessFlagBits2::eColorAttachmentWrite, // dstAccessMask
 		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
 		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // dstStage
-		vk::ImageAspectFlagBits::eColor
+		vk::ImageAspectFlagBits::eColor,
+		commandBuffer
 	);
 	// Transition depth image to depth attachment optimal layout
 	transitionImageLayout(
@@ -682,7 +683,9 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
 		vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
 		vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
-		vk::ImageAspectFlagBits::eDepth);
+		vk::ImageAspectFlagBits::eDepth,
+		commandBuffer
+	);
 
 	constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
 	constexpr vk::ClearValue clearDepth = vk::ClearDepthStencilValue(1.0f, 0);
@@ -736,7 +739,8 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		{}, // dstAccessMask
 		vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
 		vk::PipelineStageFlagBits2::eBottomOfPipe, // dstStage
-		vk::ImageAspectFlagBits::eColor
+		vk::ImageAspectFlagBits::eColor,
+		commandBuffer
 	);
 	commandBuffer.end();
 }
@@ -1103,7 +1107,8 @@ void Renderer::transitionImageLayout(
 	const vk::AccessFlags2 dstAccessMask,
 	const vk::PipelineStageFlags2 srcStageMask,
 	const vk::PipelineStageFlags2 dstStageMask,
-	const vk::ImageAspectFlags aspectFlags) const {
+	const vk::ImageAspectFlags aspectFlags,
+	const vk::raii::CommandBuffer& commandBuffer) const {
 	vk::ImageMemoryBarrier2 barrier = {
 		.srcStageMask = srcStageMask,
 		.srcAccessMask = srcAccessMask,
@@ -1129,43 +1134,43 @@ void Renderer::transitionImageLayout(
 		.pImageMemoryBarriers = &barrier
 	};
 
-	mCommandBuffers[mFrameIndex].pipelineBarrier2(dependency_info);
+	commandBuffer.pipelineBarrier2(dependency_info);
 }
 
 void Renderer::transitionImageLayout(
 	const vk::raii::Image& image,
 	const vk::ImageLayout oldLayout,
 	const vk::ImageLayout newLayout) const {
-	const auto commandBuffer = beginSingleTimeCommands();
-	//TODO: Legacy api. should be exchanged with ImageMemoryBarrier2
-	vk::ImageMemoryBarrier barrier{
-		.oldLayout = oldLayout,
-		.newLayout = newLayout,
-		.image = image,
-		.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-	};
-
-	vk::PipelineStageFlags sourceStage;
-	vk::PipelineStageFlags destinationStage;
+	vk::AccessFlags2 srcAccess;
+	vk::AccessFlags2 dstAccess;
+	vk::PipelineStageFlags2 srcStage;
+	vk::PipelineStageFlags2 dstStage;
 
 	if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-		barrier.srcAccessMask = {};
-		barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-		sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
-		destinationStage = vk::PipelineStageFlagBits::eTransfer;
-	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
-	           newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-		barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-		sourceStage = vk::PipelineStageFlagBits::eTransfer;
-		destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+		srcAccess = vk::AccessFlagBits2::eNone;
+		dstAccess = vk::AccessFlagBits2::eTransferWrite;
+		srcStage = vk::PipelineStageFlagBits2::eTopOfPipe;
+		dstStage = vk::PipelineStageFlagBits2::eTransfer;
+	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+		srcAccess = vk::AccessFlagBits2::eTransferWrite;
+		dstAccess = vk::AccessFlagBits2::eShaderRead;
+		srcStage = vk::PipelineStageFlagBits2::eTransfer;
+		dstStage = vk::PipelineStageFlagBits2::eFragmentShader;
 	} else {
 		throw std::invalid_argument("Unsupported layout transition!");
 	}
-	commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
-
+	const auto commandBuffer = beginSingleTimeCommands();
+	transitionImageLayout(
+		*image,
+		oldLayout,
+		newLayout,
+		srcAccess,
+		dstAccess,
+		srcStage,
+		dstStage,
+		vk::ImageAspectFlagBits::eColor,
+		commandBuffer
+	);
 	endSingleTimeCommands(commandBuffer);
 }
 
