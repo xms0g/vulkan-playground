@@ -28,7 +28,8 @@ private:
 
 	void createSwapchain();
 
-	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags) const;
+	vk::raii::ImageView createImageView(const vk::Image& image, vk::Format format,
+	                                    vk::ImageAspectFlags aspectFlags) const;
 
 	void createImageViews();
 
@@ -50,6 +51,8 @@ private:
 
 	void createDescriptorSetLayout();
 
+	void createDepthResources();
+
 	void createBuffer(
 		vk::DeviceSize size,
 		vk::BufferUsageFlags usage,
@@ -62,15 +65,19 @@ private:
 	void recordCommandBuffer(uint32_t imageIndex) const;
 
 	void transitionImageLayout(
-		uint32_t imageIndex,
+		vk::Image image,
 		vk::ImageLayout oldLayout,
 		vk::ImageLayout newLayout,
 		vk::AccessFlags2 srcAccessMask,
 		vk::AccessFlags2 dstAccessMask,
 		vk::PipelineStageFlags2 srcStageMask,
-		vk::PipelineStageFlags2 dstStageMask) const;
+		vk::PipelineStageFlags2 dstStageMask,
+		vk::ImageAspectFlags aspectFlags) const;
 
-	void transitionImageLayout(const vk::raii::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout) const;
+	void transitionImageLayout(
+		const vk::raii::Image& image,
+		vk::ImageLayout oldLayout,
+		vk::ImageLayout newLayout) const;
 
 	void createSyncObjects();
 
@@ -99,9 +106,19 @@ private:
 	[[nodiscard]]
 	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
+	vk::Format findDepthFormat() const;
+
+	vk::Format findSupportedFormat(
+		const std::vector<vk::Format>& candidates,
+		vk::ImageTiling tiling,
+		vk::FormatFeatureFlags features) const;
+
+	bool hasStencilComponent(vk::Format format);
+
 	void copyBuffer(const vk::raii::Buffer& srcBuffer, const vk::raii::Buffer& dstBuffer, vk::DeviceSize size) const;
 
-	void copyBufferToImage(const vk::raii::Buffer& buffer, const vk::raii::Image& image, uint32_t width, uint32_t height) const;
+	void copyBufferToImage(const vk::raii::Buffer& buffer, const vk::raii::Image& image, uint32_t width,
+	                       uint32_t height) const;
 
 	void updateUniformBuffer(uint32_t currentImage) const;
 
@@ -164,5 +181,8 @@ private:
 	vk::raii::DeviceMemory mTextureImageMemory{nullptr};
 	vk::raii::ImageView mTextureImageView{nullptr};
 	vk::raii::Sampler mTextureSampler{nullptr};
+	vk::raii::Image mDepthImage{nullptr};
+	vk::raii::DeviceMemory mDepthImageMemory{nullptr};
+	vk::raii::ImageView mDepthImageView{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
