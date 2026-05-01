@@ -22,7 +22,11 @@ set(STB_IMAGE
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/image/stb_image.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/libs/image/stb_image.h)
 
-set(COMPILATION_UNIT ${SRC} ${STB_IMAGE})
+set(TINY_OBJ_LOADER
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/obj/tiny_obj_loader.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/libs/obj/tiny_obj_loader.h)
+
+set(COMPILATION_UNIT ${SRC} ${STB_IMAGE} ${TINY_OBJ_LOADER})
 
 add_executable(${PROJECT_NAME} ${COMPILATION_UNIT})
 
@@ -33,8 +37,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
 
 add_slang_shader_target(TriangleShaderTarget
-        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/triangle.slang"
-        OUTPUT_NAME "triangle.spv")
+        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/model.slang"
+        OUTPUT_NAME "model.spv")
 add_dependencies(${PROJECT_NAME} TriangleShaderTarget)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

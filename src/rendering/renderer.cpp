@@ -19,23 +19,10 @@
 #include "../config/config.hpp"
 #include "../io/filesystem.h"
 #include "image/stb_image.h"
+#include "obj/tiny_obj_loader.h"
 
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-	0, 1, 2, 2, 3, 0,
-	4, 5, 6, 6, 7, 4
-};
+std::vector<Vertex> vertices;
+std::vector<uint32_t> indices;
 
 struct UniformBufferObject {
 	alignas(16) glm::mat4 model;
@@ -62,10 +49,11 @@ int Renderer::init(Window* window) {
 		createGraphicsPipeline();
 		createCommandPool();
 		createDepthResources();
+		loadModel(fs::path(ASSET_DIR + MODEL_PATH).c_str());
 		createVertexBuffer(sizeof(Vertex) * vertices.size());
-		createIndexBuffer(sizeof(uint16_t) * indices.size());
+		createIndexBuffer(sizeof(uint32_t) * indices.size());
 		createUniformBuffers();
-		createTextureImage(fs::path(ASSET_DIR + "textures/brickwall.jpg").c_str());
+		createTextureImage(fs::path(ASSET_DIR + TEXTURE_PATH).c_str());
 		createTextureImageView();
 		createTextureSampler();
 		createDescriptorPool();
@@ -337,7 +325,7 @@ void Renderer::recreateSwapchain() {
 }
 
 void Renderer::createGraphicsPipeline() {
-	const auto shaderPath = std::filesystem::path(SHADER_BINARY_DIR) / "triangle.spv";
+	const auto shaderPath = std::filesystem::path(SHADER_BINARY_DIR) / SHADER_NAME;
 	const auto shaderCode = fs::readFile(shaderPath);
 	const auto shaderModule = createShaderModule(shaderCode);
 
@@ -456,6 +444,37 @@ void Renderer::createCommandPool() {
 	};
 
 	mCommandPool = vk::raii::CommandPool(mDevice, poolInfo);
+}
+
+void Renderer::loadModel(const char* path) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path)) {
+		throw std::runtime_error(warn + err);
+	}
+
+	for (const auto& shape : shapes) {
+		for (const auto& index : shape.mesh.indices) {
+			Vertex vertex{};
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			vertex.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.color = {1.0f, 1.0f, 1.0f};
+			vertices.push_back(vertex);
+			indices.push_back(indices.size());
+		}
+	}
 }
 
 void Renderer::createVertexBuffer(const vk::DeviceSize size) {

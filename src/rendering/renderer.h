@@ -36,6 +36,8 @@ private:
 
 	void createCommandPool();
 
+	void loadModel(const char* path);
+
 	void createVertexBuffer(vk::DeviceSize size);
 
 	void createIndexBuffer(vk::DeviceSize size);
