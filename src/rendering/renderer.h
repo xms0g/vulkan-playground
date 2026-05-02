@@ -116,6 +116,7 @@ private:
 	void createImage(
 		uint32_t width,
 		uint32_t height,
+		uint32_t mipLevels,
 		vk::Format format,
 		vk::ImageTiling tiling,
 		vk::ImageUsageFlags usage,
@@ -127,11 +128,19 @@ private:
 	vk::raii::ImageView createImageView(
 		const vk::raii::Image& image,
 		vk::Format format,
-		vk::ImageAspectFlags aspectFlags) const;
+		vk::ImageAspectFlags aspectFlags,
+		uint32_t mipLevels) const;
 
 	void createTextureImageView();
 
 	void createTextureSampler();
+
+	void generateMipmaps(
+		const vk::raii::Image &image,
+		vk::Format imageFormat,
+		int32_t texWidth,
+		int32_t texHeight,
+		uint32_t mipLevels);
 
 	void transitionImageLayout(
 		vk::Image image,
@@ -142,7 +151,8 @@ private:
 		vk::PipelineStageFlags2 srcStageMask,
 		vk::PipelineStageFlags2 dstStageMask,
 		vk::ImageAspectFlags aspectFlags,
-		const vk::raii::CommandBuffer& commandBuffer) const;
+		const vk::raii::CommandBuffer& commandBuffer,
+		uint32_t mipLevels) const;
 
 	void transitionImageLayout(
 		const vk::raii::Image& image,
@@ -186,6 +196,7 @@ private:
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
 	uint32_t mFrameIndex{0};
+	uint32_t mMipLevels{0};
 	vk::raii::Image mTextureImage{nullptr};
 	vk::raii::DeviceMemory mTextureImageMemory{nullptr};
 	vk::raii::ImageView mTextureImageView{nullptr};
