@@ -131,8 +131,6 @@ private:
 		vk::ImageAspectFlags aspectFlags,
 		uint32_t mipLevels) const;
 
-	void createTextureImageView();
-
 	void createTextureSampler();
 
 	void generateMipmaps(
@@ -157,7 +155,8 @@ private:
 	void transitionImageLayout(
 		const vk::raii::Image& image,
 		vk::ImageLayout oldLayout,
-		vk::ImageLayout newLayout) const;
+		vk::ImageLayout newLayout,
+		uint32_t mipLevels) const;
 
 	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
@@ -196,7 +195,6 @@ private:
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
 	uint32_t mFrameIndex{0};
-	uint32_t mMipLevels{0};
 	vk::raii::Image mTextureImage{nullptr};
 	vk::raii::DeviceMemory mTextureImageMemory{nullptr};
 	vk::raii::ImageView mTextureImageView{nullptr};

@@ -54,7 +54,6 @@ int Renderer::init(Window* window) {
 		createIndexBuffer(sizeof(uint32_t) * indices.size());
 		createUniformBuffers();
 		createTextureImage(fs::path(ASSET_DIR + TEXTURE_PATH).c_str());
-		createTextureImageView();
 		createTextureSampler();
 		createDescriptorPool();
 		createDescriptorSets();
@@ -1017,7 +1016,7 @@ void Renderer::createTextureImage(const char* path) {
 	void* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
 	const vk::DeviceSize imageSize = texWidth * texHeight * 4;
-	mMipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+	const uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
 	if (!pixels) {
 		throw std::runtime_error("Failed to load texture image!");
@@ -1043,7 +1042,7 @@ void Renderer::createTextureImage(const char* path) {
 	createImage(
 		texWidth,
 		texHeight,
-		mMipLevels,
+		mipLevels,
 		vk::Format::eR8G8B8A8Srgb,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
@@ -1051,10 +1050,20 @@ void Renderer::createTextureImage(const char* path) {
 		mTextureImage,
 		mTextureImageMemory);
 
-	transitionImageLayout(mTextureImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+	transitionImageLayout(
+		mTextureImage,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eTransferDstOptimal,
+		mipLevels);
 	copyBufferToImage(stagingBuffer, mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
-	generateMipmaps(mTextureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight, mMipLevels);
+	generateMipmaps(mTextureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight, mipLevels);
+
+	mTextureImageView = createImageView(
+		mTextureImage,
+		vk::Format::eR8G8B8A8Srgb,
+		vk::ImageAspectFlagBits::eColor,
+		mipLevels);
 }
 
 void Renderer::createImage(
@@ -1103,14 +1112,6 @@ vk::raii::ImageView Renderer::createImageView(
 	};
 
 	return {mDevice, viewInfo};
-}
-
-void Renderer::createTextureImageView() {
-	mTextureImageView = createImageView(
-		mTextureImage,
-		vk::Format::eR8G8B8A8Srgb,
-		vk::ImageAspectFlagBits::eColor,
-		mMipLevels);
 }
 
 void Renderer::createTextureSampler() {
@@ -1273,7 +1274,8 @@ void Renderer::transitionImageLayout(
 void Renderer::transitionImageLayout(
 	const vk::raii::Image& image,
 	const vk::ImageLayout oldLayout,
-	const vk::ImageLayout newLayout) const {
+	const vk::ImageLayout newLayout,
+	const uint32_t mipLevels) const {
 	vk::AccessFlags2 srcAccess;
 	vk::AccessFlags2 dstAccess;
 	vk::PipelineStageFlags2 srcStage;
@@ -1293,7 +1295,7 @@ void Renderer::transitionImageLayout(
 	} else {
 		throw std::invalid_argument("Unsupported layout transition!");
 	}
-	const auto commandBuffer = beginSingleTimeCommands();
+	const vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
 	transitionImageLayout(
 		*image,
 		oldLayout,
@@ -1304,7 +1306,7 @@ void Renderer::transitionImageLayout(
 		dstStage,
 		vk::ImageAspectFlagBits::eColor,
 		commandBuffer,
-		mMipLevels
+		mipLevels
 	);
 	endSingleTimeCommands(commandBuffer);
 }
