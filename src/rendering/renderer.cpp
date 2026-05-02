@@ -1190,15 +1190,12 @@ void Renderer::generateMipmaps(
 		dstOffsets[0] = {0, 0, 0};
 		dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
 
-		vk::ImageBlit blit = {
-			.srcSubresource = {},
+		const vk::ImageBlit blit = {
+			.srcSubresource = {vk::ImageAspectFlagBits::eColor, i - 1, 0, 1},
 			.srcOffsets = srcOffsets,
-			.dstSubresource = {},
+			.dstSubresource = {vk::ImageAspectFlagBits::eColor, i, 0, 1},
 			.dstOffsets = dstOffsets
 		};
-
-		blit.srcSubresource = {vk::ImageAspectFlagBits::eColor, i - 1, 0, 1};
-		blit.dstSubresource = {vk::ImageAspectFlagBits::eColor, i, 0, 1};
 
 		commandBuffer.blitImage(
 			image,
