@@ -90,8 +90,10 @@ private:
 	[[nodiscard]]
 	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
 
+	[[nodiscard]]
 	vk::Format findDepthFormat() const;
 
+	[[nodiscard]]
 	vk::Format findSupportedFormat(
 		const std::vector<vk::Format>& candidates,
 		vk::ImageTiling tiling,
@@ -121,6 +123,7 @@ private:
 		vk::raii::Image& image,
 		vk::raii::DeviceMemory& imageMemory) const;
 
+	[[nodiscard]]
 	vk::raii::ImageView createImageView(
 		const vk::raii::Image& image,
 		vk::Format format,
@@ -146,6 +149,7 @@ private:
 		vk::ImageLayout oldLayout,
 		vk::ImageLayout newLayout) const;
 
+	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
 
 	void endSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
