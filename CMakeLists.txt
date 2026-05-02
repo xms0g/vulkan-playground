@@ -36,10 +36,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw Vulkan::Vulkan)
 
-add_slang_shader_target(TriangleShaderTarget
+add_slang_shader_target(ModelShaderTarget
         SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/model.slang"
         OUTPUT_NAME "model.spv")
-add_dependencies(${PROJECT_NAME} TriangleShaderTarget)
+add_dependencies(${PROJECT_NAME} ModelShaderTarget)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         SHADER_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}/shaders/"
