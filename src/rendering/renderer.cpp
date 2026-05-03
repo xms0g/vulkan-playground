@@ -48,6 +48,7 @@ int Renderer::init(Window* window) {
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createCommandPool();
+		createColorResources();
 		createDepthResources();
 		loadModel(fs::path(ASSET_DIR + MODEL_PATH).c_str());
 		createVertexBuffer(sizeof(Vertex) * vertices.size());
@@ -312,6 +313,22 @@ void Renderer::createSwapchainImageViews() {
 	}
 }
 
+void Renderer::createColorResources() {
+	createImage(
+		mSwapChainExtent.width,
+		mSwapChainExtent.height,
+		1,
+		mMSAASamples,
+		mSwapChainSurfaceFormat.format,
+		vk::ImageTiling::eOptimal,
+		vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		mColorImage,
+		mColorImageMemory);
+
+	mColorImageView = createImageView(mColorImage, mSwapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor, 1);
+}
+
 void Renderer::recreateSwapchain() {
 	mDevice.waitIdle();
 
@@ -320,6 +337,7 @@ void Renderer::recreateSwapchain() {
 
 	createSwapchain();
 	createSwapchainImageViews();
+	createColorResources();
 	createDepthResources();
 }
 
@@ -367,7 +385,7 @@ void Renderer::createGraphicsPipeline() {
 	};
 
 	vk::PipelineMultisampleStateCreateInfo multisampling{
-		.rasterizationSamples = vk::SampleCountFlagBits::e1,
+		.rasterizationSamples = mMSAASamples,
 		.sampleShadingEnable = vk::False
 	};
 
@@ -638,6 +656,7 @@ void Renderer::createDepthResources() {
 		mSwapChainExtent.width,
 		mSwapChainExtent.height,
 		1,
+		mMSAASamples,
 		depthFormat,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -694,6 +713,18 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		commandBuffer,
 		1
 	);
+
+	transitionImageLayout(
+		*mColorImage,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eColorAttachmentOptimal,
+		vk::AccessFlagBits2::eColorAttachmentWrite,
+		vk::AccessFlagBits2::eColorAttachmentWrite,
+		vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+		vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+		vk::ImageAspectFlagBits::eColor,
+		commandBuffer,
+		1);
 	// Transition depth image to depth attachment optimal layout
 	transitionImageLayout(
 		*mDepthImage,
@@ -711,9 +742,12 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 	constexpr vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
 	constexpr vk::ClearValue clearDepth = vk::ClearDepthStencilValue(1.0f, 0);
 
-	vk::RenderingAttachmentInfo attachmentInfo = {
-		.imageView = mSwapChainImageViews[imageIndex],
+	vk::RenderingAttachmentInfo colorAttachment = {
+		.imageView = mColorImageView,
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
+		.resolveMode = vk::ResolveModeFlagBits::eAverage,
+		.resolveImageView = mSwapChainImageViews[imageIndex],
+		.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.loadOp = vk::AttachmentLoadOp::eClear,
 		.storeOp = vk::AttachmentStoreOp::eStore,
 		.clearValue = clearColor
@@ -731,7 +765,7 @@ void Renderer::recordCommandBuffer(const uint32_t imageIndex) const {
 		.renderArea = {.offset = {0, 0}, .extent = mSwapChainExtent},
 		.layerCount = 1,
 		.colorAttachmentCount = 1,
-		.pColorAttachments = &attachmentInfo,
+		.pColorAttachments = &colorAttachment,
 		.pDepthAttachment = &depthAttachmentInfo
 	};
 
@@ -793,6 +827,7 @@ void Renderer::getPhysicalDevice() {
 	for (auto& phyDevice: physicalDevices) {
 		if (checkDeviceSuitable(phyDevice)) {
 			mPhysicalDevice = phyDevice;
+			mMSAASamples = getMaxUsableSampleCount();
 			break;
 		}
 	}
@@ -1043,6 +1078,7 @@ void Renderer::createTextureImage(const char* path) {
 		texWidth,
 		texHeight,
 		mipLevels,
+		vk::SampleCountFlagBits::e1,
 		vk::Format::eR8G8B8A8Srgb,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
@@ -1070,6 +1106,7 @@ void Renderer::createImage(
 	const uint32_t width,
 	const uint32_t height,
 	const uint32_t mipLevels,
+	const vk::SampleCountFlagBits numSamples,
 	const vk::Format format,
 	const vk::ImageTiling tiling,
 	const vk::ImageUsageFlags usage,
@@ -1082,7 +1119,7 @@ void Renderer::createImage(
 		.extent = {width, height, 1},
 		.mipLevels = mipLevels,
 		.arrayLayers = 1,
-		.samples = vk::SampleCountFlagBits::e1,
+		.samples = numSamples,
 		.tiling = tiling,
 		.usage = usage, .
 		sharingMode = vk::SharingMode::eExclusive
@@ -1310,6 +1347,23 @@ void Renderer::transitionImageLayout(
 		mipLevels
 	);
 	endSingleTimeCommands(commandBuffer);
+}
+
+vk::SampleCountFlagBits Renderer::getMaxUsableSampleCount() const {
+	const vk::PhysicalDeviceProperties physicalDeviceProperties = mPhysicalDevice.getProperties();
+
+	const vk::SampleCountFlags counts =
+			physicalDeviceProperties.limits.framebufferColorSampleCounts &
+			physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+
+	if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
+	if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
+	if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
+	if (counts & vk::SampleCountFlagBits::e8) { return vk::SampleCountFlagBits::e8; }
+	if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
+	if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
+
+	return vk::SampleCountFlagBits::e1;
 }
 
 vk::raii::CommandBuffer Renderer::beginSingleTimeCommands() const {

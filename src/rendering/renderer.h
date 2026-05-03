@@ -30,6 +30,8 @@ private:
 
 	void createSwapchainImageViews();
 
+	void createColorResources();
+
 	void recreateSwapchain();
 
 	void createGraphicsPipeline();
@@ -117,6 +119,7 @@ private:
 		uint32_t width,
 		uint32_t height,
 		uint32_t mipLevels,
+		vk::SampleCountFlagBits numSamples,
 		vk::Format format,
 		vk::ImageTiling tiling,
 		vk::ImageUsageFlags usage,
@@ -157,6 +160,9 @@ private:
 		vk::ImageLayout oldLayout,
 		vk::ImageLayout newLayout,
 		uint32_t mipLevels) const;
+
+	[[nodiscard]]
+	vk::SampleCountFlagBits getMaxUsableSampleCount() const;
 
 	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
@@ -202,5 +208,9 @@ private:
 	vk::raii::Image mDepthImage{nullptr};
 	vk::raii::DeviceMemory mDepthImageMemory{nullptr};
 	vk::raii::ImageView mDepthImageView{nullptr};
+	vk::SampleCountFlagBits mMSAASamples;
+	vk::raii::Image mColorImage{nullptr};
+	vk::raii::DeviceMemory mColorImageMemory{nullptr};
+	vk::raii::ImageView mColorImageView{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
