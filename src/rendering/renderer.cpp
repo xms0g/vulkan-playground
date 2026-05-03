@@ -1140,7 +1140,7 @@ void Renderer::generateMipmaps(
 	const vk::Format imageFormat,
 	const int32_t texWidth,
 	const int32_t texHeight,
-	const uint32_t mipLevels) {
+	const uint32_t mipLevels) const {
 	// Check if image format supports linear blit-ing
 	const vk::FormatProperties formatProperties = mPhysicalDevice.getFormatProperties(imageFormat);
 
@@ -1157,13 +1157,14 @@ void Renderer::generateMipmaps(
 		.newLayout = vk::ImageLayout::eTransferSrcOptimal,
 		.srcQueueFamilyIndex = vk::QueueFamilyIgnored,
 		.dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-		.image = image
+		.image = image,
+		.subresourceRange = {
+			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1,
+		}
 	};
-
-	barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.subresourceRange.levelCount = 1;
 
 	const vk::DependencyInfo dependencyInfo = {
 		.dependencyFlags = {},

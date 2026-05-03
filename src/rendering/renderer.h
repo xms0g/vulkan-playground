@@ -138,7 +138,7 @@ private:
 		vk::Format imageFormat,
 		int32_t texWidth,
 		int32_t texHeight,
-		uint32_t mipLevels);
+		uint32_t mipLevels) const;
 
 	void transitionImageLayout(
 		vk::Image image,
