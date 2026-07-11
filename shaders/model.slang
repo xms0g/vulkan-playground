@@ -9,6 +9,7 @@ struct UniformBuffer {
     float4x4 view;
     float4x4 proj;
 };
+[[vk::binding(0, 0)]]
 ConstantBuffer<UniformBuffer> ubo;
 
 struct VSOutput {
@@ -26,6 +27,7 @@ VSOutput vertMain(VSInput input) {
     return output;
 }
 
+[[vk::binding(1, 0)]]
 Sampler2D texture;
 
 [shader("fragment")]
