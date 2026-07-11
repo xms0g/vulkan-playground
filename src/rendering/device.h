@@ -126,7 +126,6 @@ private:
 	std::vector<Buffer> mUniformBuffers;
 	std::unique_ptr<Buffer> mVertexBuffer{nullptr};
 	std::unique_ptr<Buffer> mIndexBuffer{nullptr};
-	vk::raii::DeviceMemory mIndexBufferMemory{nullptr};
 	std::unique_ptr<CommandPool> mCommandPool;
 	std::vector<CommandBuffer> mGraphicsCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
