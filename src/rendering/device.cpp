@@ -402,21 +402,20 @@ void Device::createGraphicsDescriptorSets() {
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		writer.writeBuffer(
-					*mGraphicsDescriptorSets[i],
-					0,
-					vk::DescriptorType::eUniformBuffer,
-					**mUniformBuffers[i],
-					0,
-					sizeof(UniformBufferObject))
-				.writeImage(
-					*mGraphicsDescriptorSets[i],
-					1,
-					vk::DescriptorType::eCombinedImageSampler,
-					mTextureSampler,
-					mTextureImage.imageView(),
-					vk::ImageLayout::eShaderReadOnlyOptimal);
-
-		writer.update();
+			*mGraphicsDescriptorSets[i],
+			0,
+			vk::DescriptorType::eUniformBuffer,
+			**mUniformBuffers[i],
+			0,
+			sizeof(UniformBufferObject))
+		.writeImage(
+			*mGraphicsDescriptorSets[i],
+			1,
+			vk::DescriptorType::eCombinedImageSampler,
+			mTextureSampler,
+			mTextureImage.imageView(),
+			vk::ImageLayout::eShaderReadOnlyOptimal)
+		.update();
 	}
 }
 
