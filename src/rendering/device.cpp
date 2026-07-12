@@ -12,9 +12,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "commandBuffer.h"
-#include "descriptorPool.h"
 #include "descriptorSet.h"
-#include "descriptorSetLayout.h"
 #include "deviceExtension.hpp"
 #include "image.h"
 #include "validation.hpp"
@@ -40,21 +38,14 @@ void Device::init() {
 		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
-		mSwapchain = Swapchain(mSurface, mDevice, mPhysicalDevice, *mWindow);
+		createSwapchain();
 		createDescriptorSetLayout();
 		createPipelines();
-		mCommandPool = CommandPool(mDevice, mQueueIndex, vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+		createCommandPool();
 		createColorResources();
 		createDepthResources();
 		loadModel(fs::path(ASSET_DIR + MODEL_PATH).c_str());
-		mVertexBuffer = createDeviceLocalBuffer(
-			vertices.data(),
-		 sizeof(Vertex) * vertices.size(),
-		 vk::BufferUsageFlagBits::eVertexBuffer);
-		mIndexBuffer = createDeviceLocalBuffer(
-			indices.data(),
-			sizeof(uint32_t) * indices.size(),
-			vk::BufferUsageFlagBits::eIndexBuffer);
+		createBuffers();
 		createUniformBuffers();
 		createTextureImage(fs::path(ASSET_DIR + TEXTURE_PATH).c_str());
 		createTextureSampler();
@@ -276,6 +267,10 @@ void Device::createLogicalDevice() {
 	mQueue = vk::raii::Queue(mDevice, mQueueIndex, 0);
 }
 
+void Device::createSwapchain() {
+	mSwapchain = Swapchain(mSurface, mDevice, mPhysicalDevice, *mWindow);
+}
+
 void Device::createDescriptorSetLayout() {
 	mGraphicsDescriptorSetLayout = DescriptorSetLayout(mDevice);
 	mGraphicsDescriptorSetLayout.addBinding(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex)
@@ -296,6 +291,10 @@ void Device::createPipelines() {
 		mDepthFormat,
 		mMSAACount,
 		Vertex::layout());
+}
+
+void Device::createCommandPool() {
+	mCommandPool = CommandPool(mDevice, mQueueIndex, vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 }
 
 void Device::createDescriptorPool() {
@@ -338,10 +337,22 @@ void Device::loadModel(const char* path) {
 	}
 }
 
+void Device::createBuffers() {
+	mVertexBuffer = createDeviceLocalBuffer(
+		vertices.data(),
+		sizeof(Vertex) * vertices.size(),
+		vk::BufferUsageFlagBits::eVertexBuffer);
+
+	mIndexBuffer = createDeviceLocalBuffer(
+		indices.data(),
+		sizeof(uint32_t) * indices.size(),
+		vk::BufferUsageFlagBits::eIndexBuffer);
+}
+
 Buffer Device::createDeviceLocalBuffer(
 	const void* data,
 	const vk::DeviceSize size,
-	const vk::BufferUsageFlags usage) {
+	const vk::BufferUsageFlags usage) const {
 	Buffer stagingBuffer{
 		size,
 		mDevice,

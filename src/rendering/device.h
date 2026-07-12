@@ -2,7 +2,6 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
-
 #include "buffer.h"
 #include "commandPool.h"
 #include "descriptorPool.h"
@@ -51,11 +50,15 @@ private:
 
 	void createPipelines();
 
+	void createCommandPool();
+
 	void createDescriptorPool();
 
 	void loadModel(const char* path);
 
-	Buffer createDeviceLocalBuffer(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
+	void createBuffers();
+
+	Buffer createDeviceLocalBuffer(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage) const;
 
 	void createUniformBuffers();
 
