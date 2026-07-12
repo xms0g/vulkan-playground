@@ -8,11 +8,11 @@ Swapchain::Swapchain(
 	create(surface, device, phyDev, window);
 }
 
-vk::SurfaceFormatKHR& Swapchain::surfaceFormat() {
+const vk::SurfaceFormatKHR& Swapchain::surfaceFormat() const {
 	return mSwapChainSurfaceFormat;
 }
 
-vk::Image& Swapchain::image(const uint32_t imageIndex) {
+const vk::Image& Swapchain::image(const uint32_t imageIndex) const {
 	return mSwapChainImages[imageIndex];
 }
 
@@ -20,11 +20,11 @@ size_t Swapchain::imageCount() const {
 	return mSwapChainImages.size();
 }
 
-vk::raii::ImageView& Swapchain::imageView(const uint32_t imageIndex) {
+const vk::raii::ImageView& Swapchain::imageView(const uint32_t imageIndex) const {
 	return mSwapChainImageViews[imageIndex];
 }
 
-vk::Extent2D& Swapchain::extent() {
+const vk::Extent2D& Swapchain::extent() const {
 	return mSwapChainExtent;
 }
 

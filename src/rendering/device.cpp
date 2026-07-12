@@ -12,7 +12,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "commandBuffer.h"
-#include "swapchain.h"
 #include "descriptorPool.h"
 #include "descriptorSet.h"
 #include "descriptorSetLayout.h"
@@ -41,7 +40,7 @@ void Device::init() {
 		createSurface();
 		getPhysicalDevice();
 		createLogicalDevice();
-		createSwapchain();
+		mSwapchain = Swapchain(mSurface, mDevice, mPhysicalDevice, *mWindow);
 		createDescriptorSetLayout();
 		createPipelines();
 		mCommandPool = CommandPool(mDevice, mQueueIndex, vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -74,7 +73,7 @@ void Device::prepareFrame() {
 		throw std::runtime_error("Failed to wait for fence!");
 	}
 
-	mImageIndex = mSwapchain->acquireNextImage(mPresentCompleteSemaphores[mFrameIndex]);
+	mImageIndex = mSwapchain.acquireNextImage(mPresentCompleteSemaphores[mFrameIndex]);
 
 	updateUniformBuffer(mFrameIndex);
 
@@ -103,14 +102,14 @@ void Device::presentFrame() {
 		.waitSemaphoreCount = 1,
 		.pWaitSemaphores = &*mRenderFinishedSemaphores[mImageIndex],
 		.swapchainCount = 1,
-		.pSwapchains = &***mSwapchain,
+		.pSwapchains = &**mSwapchain,
 		.pImageIndices = &mImageIndex
 	};
 
 	auto result = mQueue.presentKHR(presentInfoKHR);
 	if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR || mWindow.windowResized()) {
 		mWindow.windowResized(false);
-		mSwapchain->recreate(mSurface, mDevice, mPhysicalDevice, *mWindow);
+		mSwapchain.recreate(mSurface, mDevice, mPhysicalDevice, *mWindow);
 	} else {
 		assert(result == vk::Result::eSuccess);
 	}
@@ -277,10 +276,6 @@ void Device::createLogicalDevice() {
 	mQueue = vk::raii::Queue(mDevice, mQueueIndex, 0);
 }
 
-void Device::createSwapchain() {
-	mSwapchain = std::make_unique<Swapchain>(mSurface, mDevice, mPhysicalDevice, *mWindow);
-}
-
 void Device::createDescriptorSetLayout() {
 	mGraphicsDescriptorSetLayout = DescriptorSetLayout(mDevice);
 	mGraphicsDescriptorSetLayout.addBinding(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex)
@@ -297,7 +292,7 @@ void Device::createPipelines() {
 		shader,
 		mGraphicsDescriptorSetLayout,
 		1,
-		mSwapchain->surfaceFormat(),
+		mSwapchain.surfaceFormat(),
 		mDepthFormat,
 		mMSAACount,
 		Vertex::layout());
@@ -426,11 +421,11 @@ void Device::createColorResources() {
 	mColorImage = Image(
 		mDevice,
 		mPhysicalDevice,
-		mSwapchain->extent().width,
-		mSwapchain->extent().height,
+		mSwapchain.extent().width,
+		mSwapchain.extent().height,
 		1,
 		mMSAACount,
-		mSwapchain->surfaceFormat().format,
+		mSwapchain.surfaceFormat().format,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -442,8 +437,8 @@ void Device::createDepthResources() {
 	mDepthImage = Image(
 		mDevice,
 		mPhysicalDevice,
-		mSwapchain->extent().width,
-		mSwapchain->extent().height,
+		mSwapchain.extent().width,
+		mSwapchain.extent().height,
 		1,
 		mMSAACount,
 		mDepthFormat,
@@ -543,7 +538,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 
 	// Before starting rendering, transition the swapchain image to vk::ImageLayout::eColorAttachmentOptimal
 	Image::transitionImageLayout(
-		mSwapchain->image(imageIndex),
+		mSwapchain.image(imageIndex),
 		vk::ImageLayout::eUndefined,
 		vk::ImageLayout::eColorAttachmentOptimal,
 		{}, // srcAccessMask (no need to wait for previous operations)
@@ -587,7 +582,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 		.imageView = mColorImage.imageView(),
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.resolveMode = vk::ResolveModeFlagBits::eAverage,
-		.resolveImageView = mSwapchain->imageView(imageIndex),
+		.resolveImageView = mSwapchain.imageView(imageIndex),
 		.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.loadOp = vk::AttachmentLoadOp::eClear,
 		.storeOp = vk::AttachmentStoreOp::eStore,
@@ -603,7 +598,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 	};
 
 	const vk::RenderingInfo renderingInfo = {
-		.renderArea = {.offset = {0, 0}, .extent = mSwapchain->extent()},
+		.renderArea = {.offset = {0, 0}, .extent = mSwapchain.extent()},
 		.layerCount = 1,
 		.colorAttachmentCount = 1,
 		.pColorAttachments = &colorAttachment,
@@ -612,9 +607,9 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 
 	(*commandBuffer).beginRendering(renderingInfo);
 	(*commandBuffer).bindPipeline(vk::PipelineBindPoint::eGraphics, **mGraphicsPipeline);
-	(*commandBuffer).setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(mSwapchain->extent().width),
-	                                             static_cast<float>(mSwapchain->extent().height), 0.0f, 1.0f));
-	(*commandBuffer).setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapchain->extent()));
+	(*commandBuffer).setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(mSwapchain.extent().width),
+	                                             static_cast<float>(mSwapchain.extent().height), 0.0f, 1.0f));
+	(*commandBuffer).setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapchain.extent()));
 	(*commandBuffer).bindVertexBuffers(0, {**mVertexBuffer}, {0});
 	(*commandBuffer).bindIndexBuffer(**mIndexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
 	(*commandBuffer).bindDescriptorSets(
@@ -628,7 +623,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 
 	// After rendering, transition the swapchain image to vk::ImageLayout::ePresentSrcKHR
 	Image::transitionImageLayout(
-		mSwapchain->image(imageIndex),
+		mSwapchain.image(imageIndex),
 		vk::ImageLayout::eColorAttachmentOptimal,
 		vk::ImageLayout::ePresentSrcKHR,
 		vk::AccessFlagBits2::eColorAttachmentWrite, // srcAccessMask
@@ -648,7 +643,7 @@ void Device::createSyncObjects() {
 		mRenderFinishedSemaphores.empty() &&
 		mFences.empty());
 
-	for (size_t i = 0; i < mSwapchain->imageCount(); ++i) {
+	for (size_t i = 0; i < mSwapchain.imageCount(); ++i) {
 		mRenderFinishedSemaphores.emplace_back(mDevice, vk::SemaphoreCreateInfo());
 	}
 
@@ -658,7 +653,7 @@ void Device::createSyncObjects() {
 	}
 }
 
-void Device::updateUniformBuffer(uint32_t currentImage) const {
+void Device::updateUniformBuffer(const uint32_t currentImage) const {
 	static auto startTime = std::chrono::high_resolution_clock::now();
 
 	const auto currentTime = std::chrono::high_resolution_clock::now();
@@ -669,7 +664,7 @@ void Device::updateUniformBuffer(uint32_t currentImage) const {
 	ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(
 		glm::radians(45.0f),
-		static_cast<float>(mSwapchain->extent().width) / static_cast<float>(mSwapchain->extent().height),
+		static_cast<float>(mSwapchain.extent().width) / static_cast<float>(mSwapchain.extent().height),
 		0.1f,
 		10.0f);
 	ubo.proj[1][1] *= -1;

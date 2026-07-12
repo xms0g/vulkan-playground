@@ -5,21 +5,23 @@
 
 class Swapchain {
 public:
+	Swapchain() = default;
+
 	Swapchain(
 		const vk::raii::SurfaceKHR& surface,
 		const vk::raii::Device& device,
 		const vk::raii::PhysicalDevice& phyDev,
 		GLFWwindow& window);
 
-	vk::SurfaceFormatKHR& surfaceFormat();
+	const vk::SurfaceFormatKHR& surfaceFormat() const;
 
-	vk::Image& image(uint32_t imageIndex);
+	const vk::Image& image(uint32_t imageIndex) const;
 
 	size_t imageCount() const;
 
-	vk::raii::ImageView& imageView(uint32_t imageIndex);
+	const vk::raii::ImageView& imageView(uint32_t imageIndex) const;
 
-	vk::Extent2D& extent();
+	const vk::Extent2D& extent() const;
 
 	uint32_t acquireNextImage(const vk::raii::Semaphore& sem) const;
 
@@ -49,9 +51,9 @@ private:
 
 	static uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
-	vk::raii::SwapchainKHR mSwapChain{nullptr};
 	vk::SurfaceFormatKHR mSwapChainSurfaceFormat;
 	vk::Extent2D mSwapChainExtent;
 	std::vector<vk::Image> mSwapChainImages;
 	std::vector<vk::raii::ImageView> mSwapChainImageViews;
+	vk::raii::SwapchainKHR mSwapChain{nullptr};
 };

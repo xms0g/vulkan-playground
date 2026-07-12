@@ -9,6 +9,7 @@
 #include "descriptorSetLayout.h"
 #include "image.h"
 #include "pipelineBuilder.h"
+#include "swapchain.h"
 
 class DescriptorSetLayout;
 class CommandBuffer;
@@ -130,9 +131,9 @@ private:
 	vk::raii::Queue mQueue{nullptr};
 	uint32_t mQueueIndex{static_cast<uint32_t>(~0)};
 	vk::raii::SurfaceKHR mSurface{nullptr};
-	std::unique_ptr<Swapchain> mSwapchain;
-	DescriptorSetLayout mGraphicsDescriptorSetLayout;
-	DescriptorPool mDescriptorPool;
+	Swapchain mSwapchain{};
+	DescriptorSetLayout mGraphicsDescriptorSetLayout{};
+	DescriptorPool mDescriptorPool{};
 	std::vector<vk::raii::DescriptorSet> mGraphicsDescriptorSets;
 	GraphicsPipeline mGraphicsPipeline{};
 	std::vector<Buffer> mUniformBuffers;

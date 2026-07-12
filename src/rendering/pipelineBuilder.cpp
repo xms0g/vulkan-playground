@@ -151,7 +151,7 @@ vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(
 }
 
 vk::raii::Pipeline PipelineBuilder::buildGraphics(
-	vk::SurfaceFormatKHR& surfaceFormat,
+	const vk::SurfaceFormatKHR& surfaceFormat,
 	const vk::Format& depthFormat,
 	const vk::raii::PipelineLayout& layout) {
 	const vk::PipelineDynamicStateCreateInfo dynamicState{
@@ -203,7 +203,7 @@ GraphicsPipeline::GraphicsPipeline(
 	Shader& shader,
 	DescriptorSetLayout& dscSetLayout,
 	const uint32_t dscSetLayoutCount,
-	vk::SurfaceFormatKHR& surfaceFormat,
+	const vk::SurfaceFormatKHR& surfaceFormat,
 	const vk::Format& depthFormat,
 	const vk::SampleCountFlagBits sampleCount,
 	const VertexLayout& layout) {

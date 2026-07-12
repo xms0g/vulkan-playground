@@ -47,7 +47,7 @@ public:
 		vk::ShaderStageFlags stages = {}) const;
 
 	vk::raii::Pipeline buildGraphics(
-		vk::SurfaceFormatKHR& surfaceFormat,
+		const vk::SurfaceFormatKHR& surfaceFormat,
 		const vk::Format& depthFormat,
 		const vk::raii::PipelineLayout& layout);
 
@@ -104,7 +104,7 @@ public:
 		Shader& shader,
 		DescriptorSetLayout& dscSetLayout,
 		uint32_t dscSetLayoutCount,
-		vk::SurfaceFormatKHR& surfaceFormat,
+		const vk::SurfaceFormatKHR& surfaceFormat,
 		const vk::Format& depthFormat,
 		vk::SampleCountFlagBits sampleCount,
 		const VertexLayout& layout);
