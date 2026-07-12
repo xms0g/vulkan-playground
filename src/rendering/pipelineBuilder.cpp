@@ -1,12 +1,8 @@
 #include "pipelineBuilder.h"
 #include "swapchain.h"
 #include "descriptorSetLayout.h"
-#include "format.hpp"
-#include "sample.hpp"
 
-PipelineBuilder::PipelineBuilder(
-	const vk::raii::Device& device,
-	const vk::raii::PhysicalDevice& phyDevice) : mDevice(device), mPhysicalDevice(phyDevice) {
+PipelineBuilder::PipelineBuilder(const vk::raii::Device& device) : mDevice(device) {
 }
 
 void PipelineBuilder::reset() {
@@ -86,9 +82,9 @@ PipelineBuilder& PipelineBuilder::rasterizer() {
 	return *this;
 }
 
-PipelineBuilder& PipelineBuilder::multisampling() {
+PipelineBuilder& PipelineBuilder::multisampling(const vk::SampleCountFlagBits sampleCount) {
 	mMultisampling = {
-		.rasterizationSamples = Sample::getMaxUsableSampleCount(mPhysicalDevice),
+		.rasterizationSamples = sampleCount,
 		.sampleShadingEnable = vk::False
 	};
 
@@ -209,6 +205,7 @@ GraphicsPipeline::GraphicsPipeline(
 	const uint32_t dscSetLayoutCount,
 	vk::SurfaceFormatKHR& surfaceFormat,
 	const vk::Format& depthFormat,
+	const vk::SampleCountFlagBits sampleCount,
 	const VertexLayout& layout) {
 	mVertexLayout = layout;
 
@@ -219,7 +216,7 @@ GraphicsPipeline::GraphicsPipeline(
 			.viewportState(1, 1)
 			.dynamicStates<vk::DynamicState::eViewport, vk::DynamicState::eScissor>()
 			.rasterizer()
-			.multisampling()
+			.multisampling(sampleCount)
 			.depthStencil()
 			.alphaBlending();
 

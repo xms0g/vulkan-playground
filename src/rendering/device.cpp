@@ -21,7 +21,6 @@
 #include "deviceExtension.hpp"
 #include "image.h"
 #include "pipelineBuilder.h"
-#include "sample.hpp"
 #include "validation.hpp"
 #include "mesh/vertex.hpp"
 #include "image/stb_image.h"
@@ -135,6 +134,7 @@ void Device::getPhysicalDevice() {
 	if (deviceIt != physicalDevices.end()) {
 		mPhysicalDevice = *deviceIt;
 		mDepthFormat = findDepthFormat();
+		mMSAACount = getMaxUsableSampleCount();
 	}
 }
 
@@ -288,7 +288,7 @@ void Device::createDescriptorSetLayout() {
 }
 
 void Device::createPipelines() {
-	PipelineBuilder builder{mDevice, mPhysicalDevice};
+	PipelineBuilder builder{mDevice};
 	Shader shader{mDevice, std::string(SHADER_BINARY_DIR) + SHADER_NAME};
 
 	mGraphicsPipeline = std::make_unique<GraphicsPipeline>(
@@ -298,6 +298,7 @@ void Device::createPipelines() {
 		1,
 		mSwapchain->surfaceFormat(),
 		mDepthFormat,
+		mMSAACount,
 		Vertex::layout());
 }
 
@@ -348,8 +349,10 @@ void Device::loadModel(const char* path) {
 	}
 }
 
-std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(const void* data, vk::DeviceSize size,
-                                                        const vk::BufferUsageFlags usage) {
+std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(
+	const void* data,
+	vk::DeviceSize size,
+	const vk::BufferUsageFlags usage) {
 	Buffer stagingBuffer{
 		size,
 		mDevice,
@@ -432,7 +435,7 @@ void Device::createColorResources() {
 		mSwapchain->extent().width,
 		mSwapchain->extent().height,
 		1,
-		Sample::getMaxUsableSampleCount(mPhysicalDevice),
+		mMSAACount,
 		mSwapchain->surfaceFormat().format,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
@@ -448,7 +451,7 @@ void Device::createDepthResources() {
 		mSwapchain->extent().width,
 		mSwapchain->extent().height,
 		1,
-		Sample::getMaxUsableSampleCount(mPhysicalDevice),
+		mMSAACount,
 		mDepthFormat,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eDepthStencilAttachment,
@@ -768,6 +771,23 @@ vk::Format Device::findSupportedFormat(
 	}
 
 	throw std::runtime_error("Failed to find supported depth format!");
+}
+
+vk::SampleCountFlagBits Device::getMaxUsableSampleCount() const {
+	const vk::PhysicalDeviceProperties physicalDeviceProperties = mPhysicalDevice.getProperties();
+
+	const vk::SampleCountFlags counts =
+			physicalDeviceProperties.limits.framebufferColorSampleCounts &
+			physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+
+	if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
+	if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
+	if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
+	if (counts & vk::SampleCountFlagBits::e8) { return vk::SampleCountFlagBits::e8; }
+	if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
+	if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
+
+	return vk::SampleCountFlagBits::e1;
 }
 
 void Device::copyBuffer(const Buffer& dstBuffer, const Buffer& srcBuffer, const vk::DeviceSize size) const {

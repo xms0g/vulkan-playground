@@ -10,7 +10,7 @@ class Shader;
 
 class PipelineBuilder {
 public:
-	explicit PipelineBuilder(const vk::raii::Device& device, const vk::raii::PhysicalDevice& phyDevice);
+	explicit PipelineBuilder(const vk::raii::Device& device);
 
 	void reset();
 
@@ -34,7 +34,7 @@ public:
 
 	PipelineBuilder& rasterizer();
 
-	PipelineBuilder& multisampling();
+	PipelineBuilder& multisampling(vk::SampleCountFlagBits sampleCount);
 
 	PipelineBuilder& depthStencil();
 
@@ -67,7 +67,6 @@ private:
 	std::vector<vk::PipelineShaderStageCreateInfo> mShaderStages;
 	std::vector<vk::DynamicState> mDynamicStates;
 	const vk::raii::Device& mDevice;
-	const vk::raii::PhysicalDevice& mPhysicalDevice;
 };
 
 template<vk::DynamicState T>
@@ -105,6 +104,7 @@ public:
 		uint32_t dscSetLayoutCount,
 		vk::SurfaceFormatKHR& surfaceFormat,
 		const vk::Format& depthFormat,
+		vk::SampleCountFlagBits sampleCount,
 		const VertexLayout& layout);
 
 private:

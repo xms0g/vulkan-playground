@@ -93,6 +93,8 @@ private:
 		vk::ImageTiling tiling,
 		vk::FormatFeatureFlags features) const;
 
+	vk::SampleCountFlagBits getMaxUsableSampleCount() const;
+
 	void copyBuffer(const Buffer& dstBuffer, const Buffer& srcBuffer, vk::DeviceSize size) const;
 
 	static void copyBufferToImage(
@@ -145,5 +147,6 @@ private:
 	vk::Format mDepthFormat{vk::Format::eUndefined};
 	std::unique_ptr<Image> mTextureImage{nullptr};
 	vk::raii::Sampler mTextureSampler{nullptr};
+	vk::SampleCountFlagBits mMSAACount{vk::SampleCountFlagBits::e1};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};
 };
