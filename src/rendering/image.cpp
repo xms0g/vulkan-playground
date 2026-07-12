@@ -1,6 +1,6 @@
 #include "image.h"
 #include "commandBuffer.h"
-#include "memory.hpp"
+#include "memory.h"
 
 Image::Image(
 	const vk::raii::Device& device,
@@ -32,13 +32,9 @@ Image::Image(
 	mImage = vk::raii::Image(device, imageInfo);
 
 	const vk::MemoryRequirements memRequirements = mImage.getMemoryRequirements();
-	const vk::MemoryAllocateInfo allocInfo{
-		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = Memory::findMemoryType(memRequirements.memoryTypeBits, properties, phyDev)
-	};
+	mImageMemory = DeviceMemory(device, phyDev, memRequirements.size, memRequirements.memoryTypeBits, properties);
 
-	mImageMemory = vk::raii::DeviceMemory(device, allocInfo);
-	mImage.bindMemory(mImageMemory, 0);
+	mImage.bindMemory(*mImageMemory, 0);
 }
 
 void Image::createImageView(const vk::raii::Device& device, const vk::ImageAspectFlags aspectFlags) {

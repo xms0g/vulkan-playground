@@ -1,5 +1,4 @@
 #include "buffer.h"
-#include "memory.hpp"
 
 Buffer::Buffer(
 	const vk::DeviceSize size,
@@ -15,13 +14,9 @@ Buffer::Buffer(
 	mBuffer = vk::raii::Buffer(device, bufferInfo);
 
 	const vk::MemoryRequirements memRequirements = mBuffer.getMemoryRequirements();
-	const vk::MemoryAllocateInfo allocInfo{
-		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = Memory::findMemoryType(memRequirements.memoryTypeBits, properties, phyDev)
-	};
+	mBufferMemory = DeviceMemory(device, phyDev, memRequirements.size, memRequirements.memoryTypeBits, properties);
 
-	mBufferMemory = vk::raii::DeviceMemory(device, allocInfo);
-	mBuffer.bindMemory(mBufferMemory, 0);
+	mBuffer.bindMemory(*mBufferMemory, 0);
 }
 
 vk::DeviceSize Buffer::size() const {
@@ -33,10 +28,10 @@ void* Buffer::mappedMemory() const {
 }
 
 void* Buffer::map(const size_t size) {
-	mMappedMemory = mBufferMemory.mapMemory(0, size);
+	mMappedMemory = (*mBufferMemory).mapMemory(0, size);
 	return mMappedMemory;
 }
 
 void Buffer::unmap() const {
-	mBufferMemory.unmapMemory();
+	(*mBufferMemory).unmapMemory();
 }

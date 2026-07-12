@@ -1,8 +1,7 @@
 #pragma once
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
-
-#include "device.h"
+#include "memory.h"
 
 class CommandBuffer;
 
@@ -46,6 +45,6 @@ private:
 	vk::Format mFormat;
 	uint32_t mWidth, mHeight, mMipLevels;
 	vk::raii::Image mImage{nullptr};
-	vk::raii::DeviceMemory mImageMemory{nullptr};
+	DeviceMemory mImageMemory;
 	vk::raii::ImageView mImageView{nullptr};
 };
