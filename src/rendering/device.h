@@ -2,8 +2,8 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
+#include "image.h"
 
-class Image;
 class Pipeline;
 class DescriptorSetLayout;
 class CommandBuffer;
@@ -142,10 +142,10 @@ private:
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
 	std::vector<vk::raii::Fence> mFences;
-	std::unique_ptr<Image> mColorImage{nullptr};
-	std::unique_ptr<Image> mDepthImage{nullptr};
+	Image mColorImage{};
+	Image mDepthImage{};
 	vk::Format mDepthFormat{vk::Format::eUndefined};
-	std::unique_ptr<Image> mTextureImage{nullptr};
+	Image mTextureImage{};
 	vk::raii::Sampler mTextureSampler{nullptr};
 	vk::SampleCountFlagBits mMSAACount{vk::SampleCountFlagBits::e1};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};

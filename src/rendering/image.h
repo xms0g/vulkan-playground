@@ -7,6 +7,8 @@ class CommandBuffer;
 
 class Image {
 public:
+	Image() = default;
+
 	Image(
 		const vk::raii::Device& device,
 		const vk::raii::PhysicalDevice& phyDev,

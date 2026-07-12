@@ -413,7 +413,7 @@ void Device::createGraphicsDescriptorSets() {
 					1,
 					vk::DescriptorType::eCombinedImageSampler,
 					mTextureSampler,
-					mTextureImage->imageView(),
+					mTextureImage.imageView(),
 					vk::ImageLayout::eShaderReadOnlyOptimal);
 
 		writer.update();
@@ -429,7 +429,7 @@ void Device::createCommandBuffers() {
 }
 
 void Device::createColorResources() {
-	mColorImage = std::make_unique<Image>(
+	mColorImage = Image(
 		mDevice,
 		mPhysicalDevice,
 		mSwapchain->extent().width,
@@ -441,11 +441,11 @@ void Device::createColorResources() {
 		vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	mColorImage->createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
+	mColorImage.createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
 }
 
 void Device::createDepthResources() {
-	mDepthImage = std::make_unique<Image>(
+	mDepthImage = Image(
 		mDevice,
 		mPhysicalDevice,
 		mSwapchain->extent().width,
@@ -458,7 +458,7 @@ void Device::createDepthResources() {
 		vk::MemoryPropertyFlagBits::eDeviceLocal
 	);
 
-	mDepthImage->createImageView(mDevice, vk::ImageAspectFlagBits::eDepth);
+	mDepthImage.createImageView(mDevice, vk::ImageAspectFlagBits::eDepth);
 }
 
 void Device::createTextureImage(const char* path) {
@@ -486,7 +486,7 @@ void Device::createTextureImage(const char* path) {
 
 	stbi_image_free(pixels);
 
-	mTextureImage = std::make_unique<Image>(
+	mTextureImage = Image(
 		mDevice,
 		mPhysicalDevice,
 		texWidth,
@@ -502,7 +502,7 @@ void Device::createTextureImage(const char* path) {
 	const vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
 
 	Image::transitionImageLayout(
-		***mTextureImage,
+		**mTextureImage,
 		vk::ImageLayout::eUndefined,
 		vk::ImageLayout::eTransferDstOptimal,
 		vk::AccessFlagBits2::eNone,
@@ -513,11 +513,11 @@ void Device::createTextureImage(const char* path) {
 		commandBuffer,
 		mipLevels);
 
-	copyBufferToImage(stagingBuffer, *mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+	copyBufferToImage(stagingBuffer, mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
 	                  commandBuffer);
-	mTextureImage->generateMipmaps(mPhysicalDevice, commandBuffer);
+	mTextureImage.generateMipmaps(mPhysicalDevice, commandBuffer);
 
-	mTextureImage->createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
+	mTextureImage.createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
 	endSingleTimeCommands(commandBuffer);
 }
 
@@ -562,7 +562,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 	);
 
 	Image::transitionImageLayout(
-		***mColorImage,
+		**mColorImage,
 		vk::ImageLayout::eUndefined,
 		vk::ImageLayout::eColorAttachmentOptimal,
 		vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -574,7 +574,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 		1);
 	// Transition depth image to depth attachment optimal layout
 	Image::transitionImageLayout(
-		***mDepthImage,
+		**mDepthImage,
 		vk::ImageLayout::eUndefined,
 		vk::ImageLayout::eDepthAttachmentOptimal,
 		vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
@@ -590,7 +590,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 	constexpr vk::ClearValue clearDepth = vk::ClearDepthStencilValue(1.0f, 0);
 
 	vk::RenderingAttachmentInfo colorAttachment = {
-		.imageView = mColorImage->imageView(),
+		.imageView = mColorImage.imageView(),
 		.imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
 		.resolveMode = vk::ResolveModeFlagBits::eAverage,
 		.resolveImageView = mSwapchain->imageView(imageIndex),
@@ -601,7 +601,7 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 	};
 
 	vk::RenderingAttachmentInfo depthAttachmentInfo = {
-		.imageView = mDepthImage->imageView(),
+		.imageView = mDepthImage.imageView(),
 		.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 		.loadOp = vk::AttachmentLoadOp::eClear,
 		.storeOp = vk::AttachmentStoreOp::eDontCare,
