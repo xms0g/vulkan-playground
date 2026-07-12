@@ -5,6 +5,8 @@
 
 class Buffer {
 public:
+	Buffer() = default;
+
 	Buffer(
 		vk::DeviceSize size,
 		const vk::raii::Device& device,
@@ -27,7 +29,6 @@ public:
 	const vk::raii::Buffer& operator*() const noexcept { return mBuffer; }
 
 private:
-
 	vk::DeviceSize mSize;
 	vk::raii::Buffer mBuffer{nullptr};
 	DeviceMemory mBufferMemory{};

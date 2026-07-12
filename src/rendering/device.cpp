@@ -11,16 +11,13 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "buffer.h"
 #include "commandBuffer.h"
 #include "swapchain.h"
-#include "commandPool.h"
 #include "descriptorPool.h"
 #include "descriptorSet.h"
 #include "descriptorSetLayout.h"
 #include "deviceExtension.hpp"
 #include "image.h"
-#include "pipelineBuilder.h"
 #include "validation.hpp"
 #include "mesh/vertex.hpp"
 #include "image/stb_image.h"
@@ -47,14 +44,18 @@ void Device::init() {
 		createSwapchain();
 		createDescriptorSetLayout();
 		createPipelines();
-		createCommandPool();
+		mCommandPool = CommandPool(mDevice, mQueueIndex, vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 		createColorResources();
 		createDepthResources();
 		loadModel(fs::path(ASSET_DIR + MODEL_PATH).c_str());
-		mVertexBuffer = createDeviceLocalBuffer(vertices.data(), sizeof(Vertex) * vertices.size(),
-		                                        vk::BufferUsageFlagBits::eVertexBuffer);
-		mIndexBuffer = createDeviceLocalBuffer(indices.data(), sizeof(uint32_t) * indices.size(),
-		                                       vk::BufferUsageFlagBits::eIndexBuffer);
+		mVertexBuffer = createDeviceLocalBuffer(
+			vertices.data(),
+		 sizeof(Vertex) * vertices.size(),
+		 vk::BufferUsageFlagBits::eVertexBuffer);
+		mIndexBuffer = createDeviceLocalBuffer(
+			indices.data(),
+			sizeof(uint32_t) * indices.size(),
+			vk::BufferUsageFlagBits::eIndexBuffer);
 		createUniformBuffers();
 		createTextureImage(fs::path(ASSET_DIR + TEXTURE_PATH).c_str());
 		createTextureSampler();
@@ -291,7 +292,7 @@ void Device::createPipelines() {
 	PipelineBuilder builder{mDevice};
 	Shader shader{mDevice, std::string(SHADER_BINARY_DIR) + SHADER_NAME};
 
-	mGraphicsPipeline = std::make_unique<GraphicsPipeline>(
+	mGraphicsPipeline = GraphicsPipeline(
 		builder,
 		shader,
 		*mGraphicsDescriptorSetLayout,
@@ -300,13 +301,6 @@ void Device::createPipelines() {
 		mDepthFormat,
 		mMSAACount,
 		Vertex::layout());
-}
-
-void Device::createCommandPool() {
-	mCommandPool = std::make_unique<CommandPool>(
-		mDevice,
-		mQueueIndex,
-		vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 }
 
 void Device::createDescriptorPool() {
@@ -349,9 +343,9 @@ void Device::loadModel(const char* path) {
 	}
 }
 
-std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(
+Buffer Device::createDeviceLocalBuffer(
 	const void* data,
-	vk::DeviceSize size,
+	const vk::DeviceSize size,
 	const vk::BufferUsageFlags usage) {
 	Buffer stagingBuffer{
 		size,
@@ -365,14 +359,14 @@ std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(
 	memcpy(mem, data, size);
 	stagingBuffer.unmap();
 
-	auto buffer = std::make_unique<Buffer>(
+	auto buffer = Buffer(
 		size,
 		mDevice,
 		mPhysicalDevice,
 		vk::BufferUsageFlagBits::eTransferDst | usage,
 		vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	copyBuffer(*buffer, stagingBuffer, size);
+	copyBuffer(buffer, stagingBuffer, size);
 
 	return buffer;
 }
@@ -424,7 +418,7 @@ void Device::createCommandBuffers() {
 	mGraphicsCommandBuffers.clear();
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-		mGraphicsCommandBuffers.emplace_back(mDevice, *mCommandPool, vk::CommandBufferLevel::ePrimary);
+		mGraphicsCommandBuffers.emplace_back(mDevice, mCommandPool, vk::CommandBufferLevel::ePrimary);
 	}
 }
 
@@ -621,11 +615,11 @@ void Device::recordGraphicsCommandBuffer(const uint32_t imageIndex) {
 	(*commandBuffer).setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(mSwapchain->extent().width),
 	                                             static_cast<float>(mSwapchain->extent().height), 0.0f, 1.0f));
 	(*commandBuffer).setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), mSwapchain->extent()));
-	(*commandBuffer).bindVertexBuffers(0, {***mVertexBuffer}, {0});
-	(*commandBuffer).bindIndexBuffer(***mIndexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
+	(*commandBuffer).bindVertexBuffers(0, {**mVertexBuffer}, {0});
+	(*commandBuffer).bindIndexBuffer(**mIndexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
 	(*commandBuffer).bindDescriptorSets(
 		vk::PipelineBindPoint::eGraphics,
-		mGraphicsPipeline->layout(),
+		mGraphicsPipeline.layout(),
 		0,
 		*mGraphicsDescriptorSets[mFrameIndex],
 		nullptr);

@@ -2,16 +2,17 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
-#include "image.h"
 
-class Pipeline;
+#include "buffer.h"
+#include "commandPool.h"
+#include "image.h"
+#include "pipelineBuilder.h"
+
 class DescriptorSetLayout;
 class CommandBuffer;
-class CommandPool;
 class DescriptorPool;
 class Swapchain;
 class Window;
-class Buffer;
 
 class Device {
 public:
@@ -47,13 +48,11 @@ private:
 
 	void createPipelines();
 
-	void createCommandPool();
-
 	void createDescriptorPool();
 
 	void loadModel(const char* path);
 
-	std::unique_ptr<Buffer> createDeviceLocalBuffer(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
+	Buffer createDeviceLocalBuffer(const void* data, vk::DeviceSize size, vk::BufferUsageFlags usage);
 
 	void createUniformBuffers();
 
@@ -133,11 +132,11 @@ private:
 	std::unique_ptr<DescriptorSetLayout> mGraphicsDescriptorSetLayout;
 	std::unique_ptr<DescriptorPool> mDescriptorPool;
 	std::vector<vk::raii::DescriptorSet> mGraphicsDescriptorSets;
-	std::unique_ptr<Pipeline> mGraphicsPipeline{nullptr};
+	GraphicsPipeline mGraphicsPipeline{};
 	std::vector<Buffer> mUniformBuffers;
-	std::unique_ptr<Buffer> mVertexBuffer{nullptr};
-	std::unique_ptr<Buffer> mIndexBuffer{nullptr};
-	std::unique_ptr<CommandPool> mCommandPool;
+	Buffer mVertexBuffer{};
+	Buffer mIndexBuffer{};
+	CommandPool mCommandPool{};
 	std::vector<CommandBuffer> mGraphicsCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;

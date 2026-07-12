@@ -97,6 +97,8 @@ protected:
 
 class GraphicsPipeline : public Pipeline {
 public:
+	GraphicsPipeline() = default;
+
 	GraphicsPipeline(
 		PipelineBuilder& builder,
 		Shader& shader,
