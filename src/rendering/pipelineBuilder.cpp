@@ -156,13 +156,12 @@ vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(
 
 vk::raii::Pipeline PipelineBuilder::buildGraphics(
 	vk::SurfaceFormatKHR& surfaceFormat,
+	const vk::Format& depthFormat,
 	const vk::raii::PipelineLayout& layout) {
 	const vk::PipelineDynamicStateCreateInfo dynamicState{
 		.dynamicStateCount = static_cast<uint32_t>(mDynamicStates.size()),
 		.pDynamicStates = mDynamicStates.data()
 	};
-
-	const vk::Format depthFormat = Format::findDepthFormat(mPhysicalDevice);
 
 	const vk::StructureChain<
 		vk::GraphicsPipelineCreateInfo,
@@ -209,6 +208,7 @@ GraphicsPipeline::GraphicsPipeline(
 	DescriptorSetLayout& dscSetLayout,
 	const uint32_t dscSetLayoutCount,
 	vk::SurfaceFormatKHR& surfaceFormat,
+	const vk::Format& depthFormat,
 	const VertexLayout& layout) {
 	mVertexLayout = layout;
 
@@ -224,7 +224,7 @@ GraphicsPipeline::GraphicsPipeline(
 			.alphaBlending();
 
 	mPipelineLayout = builder.createPipelineLayout(&**dscSetLayout, dscSetLayoutCount);
-	mPipeline = builder.buildGraphics(surfaceFormat, mPipelineLayout);
+	mPipeline = builder.buildGraphics(surfaceFormat, depthFormat, mPipelineLayout);
 }
 
 ComputePipeline::ComputePipeline(

@@ -86,14 +86,21 @@ private:
 
 	static bool checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice);
 
+	vk::Format findDepthFormat() const;
+
+	vk::Format findSupportedFormat(
+		std::span<vk::Format> candidates,
+		vk::ImageTiling tiling,
+		vk::FormatFeatureFlags features) const;
+
 	void copyBuffer(const Buffer& dstBuffer, const Buffer& srcBuffer, vk::DeviceSize size) const;
 
-	void copyBufferToImage(
+	static void copyBufferToImage(
 		const Buffer& buffer,
 		const Image& image,
 		uint32_t width,
 		uint32_t height,
-		const vk::raii::CommandBuffer& commandBuffer) const;
+		const vk::raii::CommandBuffer& commandBuffer);
 
 	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
@@ -111,6 +118,8 @@ private:
 	};
 
 	Window& mWindow;
+	uint32_t mImageIndex{0};
+	uint32_t mFrameIndex{0};
 	vk::raii::Context mContext;
 	vk::raii::Instance mInstance{nullptr};
 	vk::raii::PhysicalDevice mPhysicalDevice{nullptr};
@@ -130,11 +139,10 @@ private:
 	std::vector<CommandBuffer> mGraphicsCommandBuffers;
 	std::vector<vk::raii::Semaphore> mPresentCompleteSemaphores;
 	std::vector<vk::raii::Semaphore> mRenderFinishedSemaphores;
-	uint32_t mImageIndex{0};
-	uint32_t mFrameIndex{0};
 	std::vector<vk::raii::Fence> mFences;
 	std::unique_ptr<Image> mColorImage{nullptr};
 	std::unique_ptr<Image> mDepthImage{nullptr};
+	vk::Format mDepthFormat{vk::Format::eUndefined};
 	std::unique_ptr<Image> mTextureImage{nullptr};
 	vk::raii::Sampler mTextureSampler{nullptr};
 	vk::raii::DebugUtilsMessengerEXT mDebugMessenger{nullptr};

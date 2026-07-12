@@ -46,7 +46,10 @@ public:
 		uint32_t pushConstantSize = 0,
 		vk::ShaderStageFlags stages = {}) const;
 
-	vk::raii::Pipeline buildGraphics(vk::SurfaceFormatKHR& surfaceFormat, const vk::raii::PipelineLayout& layout);
+	vk::raii::Pipeline buildGraphics(
+		vk::SurfaceFormatKHR& surfaceFormat,
+		const vk::Format& depthFormat,
+		const vk::raii::PipelineLayout& layout);
 
 	[[nodiscard]]
 	vk::raii::Pipeline buildCompute(const vk::raii::PipelineLayout& layout) const;
@@ -100,7 +103,9 @@ public:
 		Shader& shader,
 		DescriptorSetLayout& dscSetLayout,
 		uint32_t dscSetLayoutCount,
-		vk::SurfaceFormatKHR& surfaceFormat, const VertexLayout& layout);
+		vk::SurfaceFormatKHR& surfaceFormat,
+		const vk::Format& depthFormat,
+		const VertexLayout& layout);
 
 private:
 	VertexLayout mVertexLayout;

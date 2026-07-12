@@ -19,7 +19,6 @@
 #include "descriptorSet.h"
 #include "descriptorSetLayout.h"
 #include "deviceExtension.hpp"
-#include "format.hpp"
 #include "image.h"
 #include "pipelineBuilder.h"
 #include "sample.hpp"
@@ -53,8 +52,10 @@ void Device::init() {
 		createColorResources();
 		createDepthResources();
 		loadModel(fs::path(ASSET_DIR + MODEL_PATH).c_str());
-		mVertexBuffer = createDeviceLocalBuffer(vertices.data(), sizeof(Vertex) * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer);
-		mIndexBuffer = createDeviceLocalBuffer(indices.data(), sizeof(uint32_t) * indices.size(), vk::BufferUsageFlagBits::eIndexBuffer);
+		mVertexBuffer = createDeviceLocalBuffer(vertices.data(), sizeof(Vertex) * vertices.size(),
+		                                        vk::BufferUsageFlagBits::eVertexBuffer);
+		mIndexBuffer = createDeviceLocalBuffer(indices.data(), sizeof(uint32_t) * indices.size(),
+		                                       vk::BufferUsageFlagBits::eIndexBuffer);
 		createUniformBuffers();
 		createTextureImage(fs::path(ASSET_DIR + TEXTURE_PATH).c_str());
 		createTextureSampler();
@@ -133,6 +134,7 @@ void Device::getPhysicalDevice() {
 
 	if (deviceIt != physicalDevices.end()) {
 		mPhysicalDevice = *deviceIt;
+		mDepthFormat = findDepthFormat();
 	}
 }
 
@@ -295,6 +297,7 @@ void Device::createPipelines() {
 		*mGraphicsDescriptorSetLayout,
 		1,
 		mSwapchain->surfaceFormat(),
+		mDepthFormat,
 		Vertex::layout());
 }
 
@@ -345,7 +348,8 @@ void Device::loadModel(const char* path) {
 	}
 }
 
-std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(const void* data, vk::DeviceSize size, const vk::BufferUsageFlags usage) {
+std::unique_ptr<Buffer> Device::createDeviceLocalBuffer(const void* data, vk::DeviceSize size,
+                                                        const vk::BufferUsageFlags usage) {
 	Buffer stagingBuffer{
 		size,
 		mDevice,
@@ -438,8 +442,6 @@ void Device::createColorResources() {
 }
 
 void Device::createDepthResources() {
-	const vk::Format depthFormat = Format::findDepthFormat(mPhysicalDevice);
-
 	mDepthImage = std::make_unique<Image>(
 		mDevice,
 		mPhysicalDevice,
@@ -447,7 +449,7 @@ void Device::createDepthResources() {
 		mSwapchain->extent().height,
 		1,
 		Sample::getMaxUsableSampleCount(mPhysicalDevice),
-		depthFormat,
+		mDepthFormat,
 		vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eDepthStencilAttachment,
 		vk::MemoryPropertyFlagBits::eDeviceLocal
@@ -508,10 +510,11 @@ void Device::createTextureImage(const char* path) {
 		commandBuffer,
 		mipLevels);
 
-	copyBufferToImage(stagingBuffer, *mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), commandBuffer);
+	copyBufferToImage(stagingBuffer, *mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
+	                  commandBuffer);
 	mTextureImage->generateMipmaps(mPhysicalDevice, commandBuffer);
 
-	mTextureImage->createImageView(mDevice,vk::ImageAspectFlagBits::eColor);
+	mTextureImage->createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
 	endSingleTimeCommands(commandBuffer);
 }
 
@@ -742,6 +745,31 @@ bool Device::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	return supportsVulkan1_3 && supportsGraphics && supportsAllRequiredExtensions && supportsRequiredFeatures;
 }
 
+vk::Format Device::findDepthFormat() const {
+	vk::Format candidates[] = {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint};
+
+	return findSupportedFormat(
+		candidates,
+		vk::ImageTiling::eOptimal,
+		vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+}
+
+vk::Format Device::findSupportedFormat(
+	const std::span<vk::Format> candidates,
+	const vk::ImageTiling tiling,
+	const vk::FormatFeatureFlags features) const {
+	for (const auto& format: candidates) {
+		const vk::FormatProperties props = mPhysicalDevice.getFormatProperties(format);
+
+		if ((tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) ||
+		    (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features)) {
+			return format;
+		}
+	}
+
+	throw std::runtime_error("Failed to find supported depth format!");
+}
+
 void Device::copyBuffer(const Buffer& dstBuffer, const Buffer& srcBuffer, const vk::DeviceSize size) const {
 	const vk::raii::CommandBuffer commandCopyBuffer = beginSingleTimeCommands();
 	commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy(0, 0, size));
@@ -753,7 +781,7 @@ void Device::copyBufferToImage(
 	const Image& image,
 	const uint32_t width,
 	const uint32_t height,
-	const vk::raii::CommandBuffer& commandBuffer) const {
+	const vk::raii::CommandBuffer& commandBuffer) {
 	vk::BufferImageCopy region{
 		.bufferOffset = 0,
 		.bufferRowLength = 0,
