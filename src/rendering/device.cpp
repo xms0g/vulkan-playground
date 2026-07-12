@@ -282,8 +282,8 @@ void Device::createSwapchain() {
 }
 
 void Device::createDescriptorSetLayout() {
-	mGraphicsDescriptorSetLayout = std::make_unique<DescriptorSetLayout>(mDevice);
-	mGraphicsDescriptorSetLayout->addBinding(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex)
+	mGraphicsDescriptorSetLayout = DescriptorSetLayout(mDevice);
+	mGraphicsDescriptorSetLayout.addBinding(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex)
 			.addBinding(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment)
 			.build();
 }
@@ -295,7 +295,7 @@ void Device::createPipelines() {
 	mGraphicsPipeline = GraphicsPipeline(
 		builder,
 		shader,
-		*mGraphicsDescriptorSetLayout,
+		mGraphicsDescriptorSetLayout,
 		1,
 		mSwapchain->surfaceFormat(),
 		mDepthFormat,
