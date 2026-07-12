@@ -10,7 +10,7 @@ void PipelineBuilder::reset() {
 	mDynamicStates.clear();
 }
 
-PipelineBuilder& PipelineBuilder::addVertexShader(Shader& shader, const std::string& entry) {
+PipelineBuilder& PipelineBuilder::addVertexShader(const Shader& shader, const std::string& entry) {
 	const vk::PipelineShaderStageCreateInfo vertShaderStageInfo{
 		.stage = vk::ShaderStageFlagBits::eVertex,
 		.module = *shader,
@@ -21,7 +21,7 @@ PipelineBuilder& PipelineBuilder::addVertexShader(Shader& shader, const std::str
 	return *this;
 }
 
-PipelineBuilder& PipelineBuilder::addFragmentShader(Shader& shader, const std::string& entry) {
+PipelineBuilder& PipelineBuilder::addFragmentShader(const Shader& shader, const std::string& entry) {
 	const vk::PipelineShaderStageCreateInfo fragShaderStageInfo{
 		.stage = vk::ShaderStageFlagBits::eFragment,
 		.module = *shader,
@@ -32,7 +32,7 @@ PipelineBuilder& PipelineBuilder::addFragmentShader(Shader& shader, const std::s
 	return *this;
 }
 
-PipelineBuilder& PipelineBuilder::addComputeShader(Shader& shader, const std::string& entry) {
+PipelineBuilder& PipelineBuilder::addComputeShader(const Shader& shader, const std::string& entry) {
 	const vk::PipelineShaderStageCreateInfo computeShaderStageInfo{
 		.stage = vk::ShaderStageFlagBits::eCompute,
 		.module = *shader,
@@ -153,7 +153,7 @@ vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(
 vk::raii::Pipeline PipelineBuilder::buildGraphics(
 	const vk::SurfaceFormatKHR& surfaceFormat,
 	const vk::Format& depthFormat,
-	const vk::raii::PipelineLayout& layout) {
+	const vk::raii::PipelineLayout& layout) const {
 	const vk::PipelineDynamicStateCreateInfo dynamicState{
 		.dynamicStateCount = static_cast<uint32_t>(mDynamicStates.size()),
 		.pDynamicStates = mDynamicStates.data()
@@ -200,8 +200,8 @@ vk::raii::Pipeline PipelineBuilder::buildCompute(const vk::raii::PipelineLayout&
 
 GraphicsPipeline::GraphicsPipeline(
 	PipelineBuilder& builder,
-	Shader& shader,
-	DescriptorSetLayout& dscSetLayout,
+	const Shader& shader,
+	const DescriptorSetLayout& dscSetLayout,
 	const uint32_t dscSetLayoutCount,
 	const vk::SurfaceFormatKHR& surfaceFormat,
 	const vk::Format& depthFormat,
@@ -226,8 +226,8 @@ GraphicsPipeline::GraphicsPipeline(
 
 ComputePipeline::ComputePipeline(
 	PipelineBuilder& builder,
-	Shader& shader,
-	DescriptorSetLayout& dscSetLayout,
+	const Shader& shader,
+	const DescriptorSetLayout& dscSetLayout,
 	const uint32_t dscSetLayoutCount,
 	const uint32_t pushConstantSize) {
 	builder.addComputeShader(shader, "compMain");
