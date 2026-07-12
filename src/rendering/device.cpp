@@ -304,8 +304,8 @@ void Device::createPipelines() {
 }
 
 void Device::createDescriptorPool() {
-	mDescriptorPool = std::make_unique<DescriptorPool>(mDevice);
-	mDescriptorPool->addMaxSets(MAX_FRAMES_IN_FLIGHT)
+	mDescriptorPool = DescriptorPool(mDevice);
+	mDescriptorPool.addMaxSets(MAX_FRAMES_IN_FLIGHT)
 			.addPoolFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
 			.addPoolSize(vk::DescriptorType::eUniformBuffer, MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(vk::DescriptorType::eCombinedImageSampler, MAX_FRAMES_IN_FLIGHT)
@@ -388,7 +388,7 @@ void Device::createUniformBuffers() {
 }
 
 void Device::createGraphicsDescriptorSets() {
-	const DescriptorSetAllocator allocator(mDevice, *mDescriptorPool);
+	const DescriptorSetAllocator allocator(mDevice, mDescriptorPool);
 	mGraphicsDescriptorSets = allocator.allocate(MAX_FRAMES_IN_FLIGHT, **mGraphicsDescriptorSetLayout);
 
 	DescriptorSetWriter writer(mDevice);

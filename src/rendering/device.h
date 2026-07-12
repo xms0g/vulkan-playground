@@ -5,6 +5,7 @@
 
 #include "buffer.h"
 #include "commandPool.h"
+#include "descriptorPool.h"
 #include "image.h"
 #include "pipelineBuilder.h"
 
@@ -130,7 +131,7 @@ private:
 	vk::raii::SurfaceKHR mSurface{nullptr};
 	std::unique_ptr<Swapchain> mSwapchain;
 	std::unique_ptr<DescriptorSetLayout> mGraphicsDescriptorSetLayout;
-	std::unique_ptr<DescriptorPool> mDescriptorPool;
+	DescriptorPool mDescriptorPool;
 	std::vector<vk::raii::DescriptorSet> mGraphicsDescriptorSets;
 	GraphicsPipeline mGraphicsPipeline{};
 	std::vector<Buffer> mUniformBuffers;
