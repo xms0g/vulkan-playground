@@ -145,7 +145,7 @@ void Image::transitionImageLayout(
 	const vk::PipelineStageFlags2 srcStageMask,
 	const vk::PipelineStageFlags2 dstStageMask,
 	const vk::ImageAspectFlags aspectFlags,
-	const vk::raii::CommandBuffer& commandBuffer,
+	const vk::raii::CommandBuffer& cmd,
 	const uint32_t mipLevels) {
 	vk::ImageMemoryBarrier2 barrier = {
 		.srcStageMask = srcStageMask,
@@ -172,5 +172,5 @@ void Image::transitionImageLayout(
 		.pImageMemoryBarriers = &barrier
 	};
 
-	commandBuffer.pipelineBarrier2(dependency_info);
+	cmd.pipelineBarrier2(dependency_info);
 }

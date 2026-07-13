@@ -107,16 +107,12 @@ private:
 		const Image& image,
 		uint32_t width,
 		uint32_t height,
-		const vk::raii::CommandBuffer& commandBuffer);
+		const vk::raii::CommandBuffer& cmd);
 
 	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;
 
-	void endSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const;
-
-	struct ComputePushConstants {
-		float deltaTime{1.0f};
-	};
+	void endSingleTimeCommands(const vk::raii::CommandBuffer& cmd) const;
 
 	struct UniformBufferObject {
 		alignas(16) glm::mat4 model;

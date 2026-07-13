@@ -280,7 +280,7 @@ void Device::createDescriptorSetLayout() {
 
 void Device::createPipelines() {
 	PipelineBuilder builder{mDevice};
-	Shader shader{mDevice, std::string(SHADER_BINARY_DIR) + SHADER_NAME};
+	const Shader shader{mDevice, std::string(SHADER_BINARY_DIR) + SHADER_NAME};
 
 	mGraphicsPipeline = GraphicsPipeline(
 		builder,
@@ -514,9 +514,10 @@ void Device::createTextureImage(const char* path) {
 
 	copyBufferToImage(stagingBuffer, mTextureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight),
 	                  commandBuffer);
-	mTextureImage.generateMipmaps(mPhysicalDevice, commandBuffer);
 
+	mTextureImage.generateMipmaps(mPhysicalDevice, commandBuffer);
 	mTextureImage.createImageView(mDevice, vk::ImageAspectFlagBits::eColor);
+
 	endSingleTimeCommands(commandBuffer);
 }
 
@@ -735,8 +736,7 @@ bool Device::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	bool supportsShaderDrawParameters = features2.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters;
 	bool supportsDynamicRendering = features2.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering;
 	bool supportsSynchronization2 = features2.get<vk::PhysicalDeviceVulkan13Features>().synchronization2;
-	bool supportsExtendedDynamicState = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
-			extendedDynamicState;
+	bool supportsExtendedDynamicState = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
 	bool supportsRequiredFeatures =
 			supportsSamplerAnisotropy &&
 			supportsShaderDrawParameters &&
@@ -800,7 +800,7 @@ void Device::copyBufferToImage(
 	const Image& image,
 	const uint32_t width,
 	const uint32_t height,
-	const vk::raii::CommandBuffer& commandBuffer) {
+	const vk::raii::CommandBuffer& cmd) {
 	vk::BufferImageCopy region{
 		.bufferOffset = 0,
 		.bufferRowLength = 0,
@@ -810,7 +810,7 @@ void Device::copyBufferToImage(
 		.imageExtent = {width, height, 1}
 	};
 
-	commandBuffer.copyBufferToImage(**buffer, **image, vk::ImageLayout::eTransferDstOptimal, {region});
+	cmd.copyBufferToImage(**buffer, **image, vk::ImageLayout::eTransferDstOptimal, {region});
 }
 
 vk::raii::CommandBuffer Device::beginSingleTimeCommands() const {
@@ -827,10 +827,10 @@ vk::raii::CommandBuffer Device::beginSingleTimeCommands() const {
 	return commandBuffer;
 }
 
-void Device::endSingleTimeCommands(const vk::raii::CommandBuffer& commandBuffer) const {
-	commandBuffer.end();
+void Device::endSingleTimeCommands(const vk::raii::CommandBuffer& cmd) const {
+	cmd.end();
 
-	const vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer};
+	const vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*cmd};
 
 	mQueue.submit(submitInfo, nullptr);
 	mQueue.waitIdle();

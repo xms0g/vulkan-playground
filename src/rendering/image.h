@@ -40,7 +40,7 @@ public:
 		vk::PipelineStageFlags2 srcStageMask,
 		vk::PipelineStageFlags2 dstStageMask,
 		vk::ImageAspectFlags aspectFlags,
-		const vk::raii::CommandBuffer& commandBuffer,
+		const vk::raii::CommandBuffer& cmd,
 		uint32_t mipLevels);
 
 private:
