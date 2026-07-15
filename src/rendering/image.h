@@ -26,7 +26,7 @@ public:
 
 	void createImageView(const vk::raii::Device& device, vk::ImageAspectFlags aspectFlags);
 
-	void generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::raii::CommandBuffer& commandBuffer) const;
+	void generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::raii::CommandBuffer& cmd) const;
 
 	vk::raii::Image& operator*() noexcept { return mImage; }
 	const vk::raii::Image& operator*() const noexcept { return mImage; }

@@ -48,7 +48,7 @@ void Image::createImageView(const vk::raii::Device& device, const vk::ImageAspec
 	mImageView = vk::raii::ImageView(device, viewInfo);
 }
 
-void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::raii::CommandBuffer& commandBuffer) const {
+void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::raii::CommandBuffer& cmd) const {
 	const vk::FormatProperties formatProperties = phyDev.getFormatProperties(mFormat);
 
 	if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear)) {
@@ -89,7 +89,7 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 		barrier.dstStageMask = vk::PipelineStageFlagBits2::eTransfer;
 		barrier.dstAccessMask = vk::AccessFlagBits2::eTransferRead;
 
-		commandBuffer.pipelineBarrier2(dependencyInfo);
+		cmd.pipelineBarrier2(dependencyInfo);
 
 		vk::ArrayWrapper1D<vk::Offset3D, 2> srcOffsets, dstOffsets;
 		srcOffsets[0] = {0, 0, 0};
@@ -104,7 +104,7 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 			.dstOffsets = dstOffsets
 		};
 
-		commandBuffer.blitImage(
+		cmd.blitImage(
 			mImage,
 			vk::ImageLayout::eTransferSrcOptimal,
 			mImage,
@@ -119,7 +119,7 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 		barrier.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
 		barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
 
-		commandBuffer.pipelineBarrier2(dependencyInfo);
+		cmd.pipelineBarrier2(dependencyInfo);
 
 		if (mipWidth > 1) mipWidth /= 2;
 		if (mipHeight > 1) mipHeight /= 2;
@@ -133,7 +133,7 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 	barrier.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
 	barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
 
-	commandBuffer.pipelineBarrier2(dependencyInfo);
+	cmd.pipelineBarrier2(dependencyInfo);
 }
 
 void Image::transitionImageLayout(
