@@ -1,13 +1,14 @@
-#include "descriptorSet.h"
-#include "descriptorPool.h"
+#include "descriptorSet.hpp"
+#include "descriptorPool.hpp"
 
 DescriptorSetAllocator::DescriptorSetAllocator(const vk::raii::Device& device, const DescriptorPool& pool)
-	: mPool(pool), mDevice(device) {
+	: mPool(pool),
+	  mDevice(device) {
 }
 
 vk::raii::DescriptorSets DescriptorSetAllocator::allocate(const uint32_t count,
                                                           const vk::DescriptorSetLayout& layout) const {
-	std::vector<vk::DescriptorSetLayout> layouts(count, layout);
+	std::vector layouts(count, layout);
 
 	const vk::DescriptorSetAllocateInfo allocInfo{
 		.descriptorPool = **mPool,
@@ -18,7 +19,8 @@ vk::raii::DescriptorSets DescriptorSetAllocator::allocate(const uint32_t count,
 	return mDevice.allocateDescriptorSets(allocInfo);
 }
 
-DescriptorSetWriter::DescriptorSetWriter(const vk::raii::Device& device) : mDevice(device) {
+DescriptorSetWriter::DescriptorSetWriter(const vk::raii::Device& device)
+	: mDevice(device) {
 }
 
 void DescriptorSetWriter::reserve(const uint32_t count) {
@@ -26,13 +28,12 @@ void DescriptorSetWriter::reserve(const uint32_t count) {
 	mWrites.reserve(count);
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeBuffer(
-	const vk::DescriptorSet set,
-	const uint32_t binding,
-	const vk::DescriptorType type,
-	const vk::Buffer buffer,
-	const vk::DeviceSize offset,
-	const vk::DeviceSize range) {
+DescriptorSetWriter& DescriptorSetWriter::writeBuffer(const vk::DescriptorSet set,
+                                                      const uint32_t binding,
+                                                      const vk::DescriptorType type,
+                                                      const vk::Buffer buffer,
+                                                      const vk::DeviceSize offset,
+                                                      const vk::DeviceSize range) {
 	mBufferInfos.emplace_back(vk::DescriptorBufferInfo{
 		.buffer = buffer,
 		.offset = offset,
@@ -50,13 +51,12 @@ DescriptorSetWriter& DescriptorSetWriter::writeBuffer(
 	return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::writeImage(
-	const vk::DescriptorSet set,
-	const uint32_t binding,
-	const vk::DescriptorType type,
-	const vk::Sampler sampler,
-	const vk::ImageView imageView,
-	const vk::ImageLayout layout) {
+DescriptorSetWriter& DescriptorSetWriter::writeImage(const vk::DescriptorSet set,
+                                                     const uint32_t binding,
+                                                     const vk::DescriptorType type,
+                                                     const vk::Sampler sampler,
+                                                     const vk::ImageView imageView,
+                                                     const vk::ImageLayout layout) {
 	mImageInfos.emplace_back(vk::DescriptorImageInfo{
 		.sampler = sampler,
 		.imageView = imageView,

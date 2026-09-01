@@ -9,6 +9,7 @@ class DescriptorSetAllocator {
 public:
 	DescriptorSetAllocator(const vk::raii::Device& device, const DescriptorPool& pool);
 
+	[[nodiscard]]
 	vk::raii::DescriptorSets allocate(uint32_t count, const vk::DescriptorSetLayout& layout) const;
 
 private:
@@ -22,21 +23,19 @@ public:
 
 	void reserve(uint32_t count);
 
-	DescriptorSetWriter& writeBuffer(
-	   vk::DescriptorSet set,
-	   uint32_t binding,
-	   vk::DescriptorType type,
-	   vk::Buffer buffer,
-	   vk::DeviceSize offset,
-	   vk::DeviceSize range);
+	DescriptorSetWriter& writeBuffer(vk::DescriptorSet set,
+	                                 uint32_t binding,
+	                                 vk::DescriptorType type,
+	                                 vk::Buffer buffer,
+	                                 vk::DeviceSize offset,
+	                                 vk::DeviceSize range);
 
-	DescriptorSetWriter& writeImage(
-	   vk::DescriptorSet set,
-	   uint32_t binding,
-	   vk::DescriptorType type,
-	   vk::Sampler sampler,
-	   vk::ImageView imageView,
-	   vk::ImageLayout layout);
+	DescriptorSetWriter& writeImage(vk::DescriptorSet set,
+	                                uint32_t binding,
+	                                vk::DescriptorType type,
+	                                vk::Sampler sampler,
+	                                vk::ImageView imageView,
+	                                vk::ImageLayout layout);
 
 	void update();
 

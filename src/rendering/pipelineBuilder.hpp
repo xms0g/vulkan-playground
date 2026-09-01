@@ -2,7 +2,7 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include "mesh/vertex.hpp"
-#include "shader.h"
+#include "shader.hpp"
 
 class DescriptorSetLayout;
 class Swapchain;
@@ -40,16 +40,15 @@ public:
 
 	PipelineBuilder& alphaBlending();
 
-	vk::raii::PipelineLayout createPipelineLayout(
-		const vk::DescriptorSetLayout* dscSetLayout = nullptr,
-		uint32_t dscSetLayoutCount = 0,
-		uint32_t pushConstantSize = 0,
-		vk::ShaderStageFlags stages = {}) const;
+	vk::raii::PipelineLayout createPipelineLayout(const vk::DescriptorSetLayout* dscSetLayout = nullptr,
+	                                              uint32_t dscSetLayoutCount = 0,
+	                                              uint32_t pushConstantSize = 0,
+	                                              vk::ShaderStageFlags stages = {}) const;
 
-	vk::raii::Pipeline buildGraphics(
-		const vk::SurfaceFormatKHR& surfaceFormat,
-		const vk::Format& depthFormat,
-		const vk::raii::PipelineLayout& layout) const;
+	[[nodiscard]]
+	vk::raii::Pipeline buildGraphics(const vk::SurfaceFormatKHR& surfaceFormat,
+	                                 const vk::Format& depthFormat,
+	                                 const vk::raii::PipelineLayout& layout) const;
 
 	[[nodiscard]]
 	vk::raii::Pipeline buildCompute(const vk::raii::PipelineLayout& layout) const;
@@ -69,23 +68,13 @@ private:
 	const vk::raii::Device& mDevice;
 };
 
-template<vk::DynamicState T>
-PipelineBuilder& PipelineBuilder::dynamicState() {
-	mDynamicStates.push_back(T);
-	return *this;
-}
-
-template<vk::DynamicState... States>
-PipelineBuilder& PipelineBuilder::dynamicStates() {
-	(mDynamicStates.push_back(States), ...);
-	return *this;
-}
+#include "pipelineBuilder.tpp"
 
 class Pipeline {
 public:
 	Pipeline() = default;
 
-	vk::raii::PipelineLayout& layout() { return mPipelineLayout; }
+	vk::raii::PipelineLayout& layout();
 
 	vk::raii::Pipeline& operator*() noexcept { return mPipeline; }
 	const vk::raii::Pipeline& operator*() const noexcept { return mPipeline; }
@@ -99,26 +88,21 @@ class GraphicsPipeline : public Pipeline {
 public:
 	GraphicsPipeline() = default;
 
-	GraphicsPipeline(
-		PipelineBuilder& builder,
-		const Shader& shader,
-		const DescriptorSetLayout& dscSetLayout,
-		uint32_t dscSetLayoutCount,
-		const vk::SurfaceFormatKHR& surfaceFormat,
-		const vk::Format& depthFormat,
-		vk::SampleCountFlagBits sampleCount,
-		const VertexLayout& layout);
-
-private:
-	VertexLayout mVertexLayout;
+	GraphicsPipeline(PipelineBuilder& builder,
+	                 const Shader& shader,
+	                 const DescriptorSetLayout& dscSetLayout,
+	                 uint32_t dscSetLayoutCount,
+	                 const vk::SurfaceFormatKHR& surfaceFormat,
+	                 const vk::Format& depthFormat,
+	                 vk::SampleCountFlagBits sampleCount,
+	                 const VertexLayout& layout);
 };
 
 class ComputePipeline : public Pipeline {
 public:
-	ComputePipeline(
-		PipelineBuilder& builder,
-		const Shader& shader,
-		const DescriptorSetLayout& dscSetLayout,
-		uint32_t dscSetLayoutCount,
-		uint32_t pushConstantSize);
+	ComputePipeline(PipelineBuilder& builder,
+	                const Shader& shader,
+	                const DescriptorSetLayout& dscSetLayout,
+	                uint32_t dscSetLayoutCount,
+	                uint32_t pushConstantSize);
 };

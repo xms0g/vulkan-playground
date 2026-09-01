@@ -1,5 +1,5 @@
-#include "engine.h"
-#include "window.h"
+#include "engine.hpp"
+#include "window.hpp"
 #include "../config/config.hpp"
 #include "../rendering/device.h"
 

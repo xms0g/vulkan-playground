@@ -1,18 +1,17 @@
-#include "image.h"
-#include "commandBuffer.h"
-#include "memory.h"
+#include "image.hpp"
+#include "commandBuffer.hpp"
+#include "memory.hpp"
 
-Image::Image(
-	const vk::raii::Device& device,
-	const vk::raii::PhysicalDevice& phyDev,
-	const uint32_t width,
-	const uint32_t height,
-	const uint32_t mipLevels,
-	const vk::SampleCountFlagBits numSamples,
-	const vk::Format format,
-	const vk::ImageTiling tiling,
-	const vk::ImageUsageFlags usage,
-	const vk::MemoryPropertyFlags properties)
+Image::Image(const vk::raii::Device& device,
+             const vk::raii::PhysicalDevice& phyDev,
+             const uint32_t width,
+             const uint32_t height,
+             const uint32_t mipLevels,
+             const vk::SampleCountFlagBits numSamples,
+             const vk::Format format,
+             const vk::ImageTiling tiling,
+             const vk::ImageUsageFlags usage,
+             const vk::MemoryPropertyFlags properties)
 	: mFormat(format),
 	  mWidth(width),
 	  mHeight(height),
@@ -20,7 +19,7 @@ Image::Image(
 	const vk::ImageCreateInfo imageInfo{
 		.imageType = vk::ImageType::e2D,
 		.format = format,
-		.extent = {width, height, 1},
+		.extent = {.width = width, .height = height, .depth = 1},
 		.mipLevels = mipLevels,
 		.arrayLayers = 1,
 		.samples = numSamples,
@@ -35,6 +34,14 @@ Image::Image(
 	mImageMemory = DeviceMemory(device, phyDev, memRequirements.size, memRequirements.memoryTypeBits, properties);
 
 	mImage.bindMemory(*mImageMemory, 0);
+}
+
+vk::raii::ImageView& Image::imageView() noexcept {
+	return mImageView;
+}
+
+const vk::raii::ImageView& Image::imageView() const noexcept {
+	return mImageView;
 }
 
 void Image::createImageView(const vk::raii::Device& device, const vk::ImageAspectFlags aspectFlags) {
@@ -77,8 +84,8 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 		.pImageMemoryBarriers = &barrier
 	};
 
-	int32_t mipWidth = mWidth;
-	int32_t mipHeight = mHeight;
+	auto mipWidth = static_cast<int32_t>(mWidth);
+	auto mipHeight = static_cast<int32_t>(mHeight);
 
 	for (uint32_t i = 1; i < mMipLevels; ++i) {
 		barrier.subresourceRange.baseMipLevel = i - 1;
@@ -92,15 +99,15 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 		cmd.pipelineBarrier2(dependencyInfo);
 
 		vk::ArrayWrapper1D<vk::Offset3D, 2> srcOffsets, dstOffsets;
-		srcOffsets[0] = {0, 0, 0};
-		srcOffsets[1] = {mipWidth, mipHeight, 1};
-		dstOffsets[0] = {0, 0, 0};
-		dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+		srcOffsets[0] = {.x = 0, .y = 0, .z = 0};
+		srcOffsets[1] = {.x = mipWidth, .y = mipHeight, .z = 1};
+		dstOffsets[0] = {.x = 0, .y = 0, .z = 0};
+		dstOffsets[1] = {.x = mipWidth > 1 ? mipWidth / 2 : 1, .y = mipHeight > 1 ? mipHeight / 2 : 1, .z = 1};
 
 		const vk::ImageBlit blit = {
-			.srcSubresource = {vk::ImageAspectFlagBits::eColor, i - 1, 0, 1},
+			.srcSubresource = {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = i - 1, .baseArrayLayer = 0, .layerCount = 1},
 			.srcOffsets = srcOffsets,
-			.dstSubresource = {vk::ImageAspectFlagBits::eColor, i, 0, 1},
+			.dstSubresource = {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = i, .baseArrayLayer = 0, .layerCount = 1},
 			.dstOffsets = dstOffsets
 		};
 
@@ -136,17 +143,16 @@ void Image::generateMipmaps(const vk::raii::PhysicalDevice& phyDev, const vk::ra
 	cmd.pipelineBarrier2(dependencyInfo);
 }
 
-void Image::transitionImageLayout(
-	const vk::Image image,
-	const vk::ImageLayout oldLayout,
-	const vk::ImageLayout newLayout,
-	const vk::AccessFlags2 srcAccessMask,
-	const vk::AccessFlags2 dstAccessMask,
-	const vk::PipelineStageFlags2 srcStageMask,
-	const vk::PipelineStageFlags2 dstStageMask,
-	const vk::ImageAspectFlags aspectFlags,
-	const vk::raii::CommandBuffer& cmd,
-	const uint32_t mipLevels) {
+void Image::transitionImageLayout(const vk::Image image,
+                                  const vk::ImageLayout oldLayout,
+                                  const vk::ImageLayout newLayout,
+                                  const vk::AccessFlags2 srcAccessMask,
+                                  const vk::AccessFlags2 dstAccessMask,
+                                  const vk::PipelineStageFlags2 srcStageMask,
+                                  const vk::PipelineStageFlags2 dstStageMask,
+                                  const vk::ImageAspectFlags aspectFlags,
+                                  const vk::raii::CommandBuffer& cmd,
+                                  const uint32_t mipLevels) {
 	vk::ImageMemoryBarrier2 barrier = {
 		.srcStageMask = srcStageMask,
 		.srcAccessMask = srcAccessMask,

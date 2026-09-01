@@ -1,8 +1,9 @@
-#include "pipelineBuilder.h"
-#include "swapchain.h"
-#include "descriptorSetLayout.h"
+#include "pipelineBuilder.hpp"
+#include "swapchain.hpp"
+#include "descriptorSetLayout.hpp"
 
-PipelineBuilder::PipelineBuilder(const vk::raii::Device& device) : mDevice(device) {
+PipelineBuilder::PipelineBuilder(const vk::raii::Device& device)
+	: mDevice(device) {
 }
 
 void PipelineBuilder::reset() {
@@ -125,11 +126,10 @@ PipelineBuilder& PipelineBuilder::alphaBlending() {
 	return *this;
 }
 
-vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(
-	const vk::DescriptorSetLayout* dscSetLayout,
-	const uint32_t dscSetLayoutCount,
-	const uint32_t pushConstantSize,
-	const vk::ShaderStageFlags stages) const {
+vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(const vk::DescriptorSetLayout* dscSetLayout,
+                                                               const uint32_t dscSetLayoutCount,
+                                                               const uint32_t pushConstantSize,
+                                                               const vk::ShaderStageFlags stages) const {
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
 		.setLayoutCount = dscSetLayoutCount,
 		.pSetLayouts = dscSetLayout,
@@ -146,14 +146,12 @@ vk::raii::PipelineLayout PipelineBuilder::createPipelineLayout(
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 	}
 
-
-	return vk::raii::PipelineLayout(mDevice, pipelineLayoutInfo);
+	return {mDevice, pipelineLayoutInfo};
 }
 
-vk::raii::Pipeline PipelineBuilder::buildGraphics(
-	const vk::SurfaceFormatKHR& surfaceFormat,
-	const vk::Format& depthFormat,
-	const vk::raii::PipelineLayout& layout) const {
+vk::raii::Pipeline PipelineBuilder::buildGraphics(const vk::SurfaceFormatKHR& surfaceFormat,
+                                                  const vk::Format& depthFormat,
+                                                  const vk::raii::PipelineLayout& layout) const {
 	const vk::PipelineDynamicStateCreateInfo dynamicState{
 		.dynamicStateCount = static_cast<uint32_t>(mDynamicStates.size()),
 		.pDynamicStates = mDynamicStates.data()
@@ -183,10 +181,11 @@ vk::raii::Pipeline PipelineBuilder::buildGraphics(
 		}
 	};
 
-	return vk::raii::Pipeline(
+	return {
 		mDevice,
 		nullptr,
-		pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
+		pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
+	};
 }
 
 vk::raii::Pipeline PipelineBuilder::buildCompute(const vk::raii::PipelineLayout& layout) const {
@@ -195,23 +194,24 @@ vk::raii::Pipeline PipelineBuilder::buildCompute(const vk::raii::PipelineLayout&
 		.layout = *layout
 	};
 
-	return vk::raii::Pipeline(mDevice, nullptr, pipelineInfo);
+	return {mDevice, nullptr, pipelineInfo};
 }
 
-GraphicsPipeline::GraphicsPipeline(
-	PipelineBuilder& builder,
-	const Shader& shader,
-	const DescriptorSetLayout& dscSetLayout,
-	const uint32_t dscSetLayoutCount,
-	const vk::SurfaceFormatKHR& surfaceFormat,
-	const vk::Format& depthFormat,
-	const vk::SampleCountFlagBits sampleCount,
-	const VertexLayout& layout) {
-	mVertexLayout = layout;
+vk::raii::PipelineLayout& Pipeline::layout() {
+	return mPipelineLayout;
+}
 
+GraphicsPipeline::GraphicsPipeline(PipelineBuilder& builder,
+                                   const Shader& shader,
+                                   const DescriptorSetLayout& dscSetLayout,
+                                   const uint32_t dscSetLayoutCount,
+                                   const vk::SurfaceFormatKHR& surfaceFormat,
+                                   const vk::Format& depthFormat,
+                                   const vk::SampleCountFlagBits sampleCount,
+                                   const VertexLayout& layout) {
 	builder.addVertexShader(shader, "vertMain")
 			.addFragmentShader(shader, "fragMain")
-			.vertexInput(mVertexLayout)
+			.vertexInput(layout)
 			.topology(vk::PrimitiveTopology::eTriangleList)
 			.viewportState(1, 1)
 			.dynamicStates<vk::DynamicState::eViewport, vk::DynamicState::eScissor>()
@@ -224,12 +224,11 @@ GraphicsPipeline::GraphicsPipeline(
 	mPipeline = builder.buildGraphics(surfaceFormat, depthFormat, mPipelineLayout);
 }
 
-ComputePipeline::ComputePipeline(
-	PipelineBuilder& builder,
-	const Shader& shader,
-	const DescriptorSetLayout& dscSetLayout,
-	const uint32_t dscSetLayoutCount,
-	const uint32_t pushConstantSize) {
+ComputePipeline::ComputePipeline(PipelineBuilder& builder,
+                                 const Shader& shader,
+                                 const DescriptorSetLayout& dscSetLayout,
+                                 const uint32_t dscSetLayoutCount,
+                                 const uint32_t pushConstantSize) {
 	builder.addComputeShader(shader, "compMain");
 
 	mPipelineLayout = builder.createPipelineLayout(

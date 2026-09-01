@@ -2,13 +2,13 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 #include <glm/glm.hpp>
-#include "buffer.h"
-#include "commandPool.h"
-#include "descriptorPool.h"
-#include "descriptorSetLayout.h"
-#include "image.h"
-#include "pipelineBuilder.h"
-#include "swapchain.h"
+#include "buffer.hpp"
+#include "commandPool.hpp"
+#include "descriptorPool.hpp"
+#include "descriptorSetLayout.hpp"
+#include "image.hpp"
+#include "pipelineBuilder.hpp"
+#include "swapchain.hpp"
 
 class DescriptorSetLayout;
 class CommandBuffer;
@@ -83,31 +83,30 @@ private:
 	// Support Functions
 	static std::vector<const char*> getRequiredInstanceExtensions();
 
-	static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(
-		vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-		vk::DebugUtilsMessageTypeFlagsEXT type,
-		const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData);
+	static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+	                                                      vk::DebugUtilsMessageTypeFlagsEXT type,
+	                                                      const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
+	                                                      void* pUserData);
 
 	static bool checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice);
 
+	[[nodiscard]]
 	vk::Format findDepthFormat() const;
 
-	vk::Format findSupportedFormat(
-		std::span<vk::Format> candidates,
-		vk::ImageTiling tiling,
-		vk::FormatFeatureFlags features) const;
+	[[nodiscard]] vk::Format findSupportedFormat(std::span<vk::Format> candidates,
+	                                             vk::ImageTiling tiling,
+	                                             vk::FormatFeatureFlags features) const;
 
+	[[nodiscard]]
 	vk::SampleCountFlagBits getMaxUsableSampleCount() const;
 
 	void copyBuffer(const Buffer& dstBuffer, const Buffer& srcBuffer, vk::DeviceSize size) const;
 
-	static void copyBufferToImage(
-		const Buffer& buffer,
-		const Image& image,
-		uint32_t width,
-		uint32_t height,
-		const vk::raii::CommandBuffer& cmd);
+	static void copyBufferToImage(const Buffer& buffer,
+	                              const Image& image,
+	                              uint32_t width,
+	                              uint32_t height,
+	                              const vk::raii::CommandBuffer& cmd);
 
 	[[nodiscard]]
 	vk::raii::CommandBuffer beginSingleTimeCommands() const;

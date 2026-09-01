@@ -11,17 +11,17 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "commandBuffer.h"
-#include "descriptorSet.h"
+#include "commandBuffer.hpp"
+#include "descriptorSet.hpp"
 #include "deviceExtension.hpp"
-#include "image.h"
+#include "image.hpp"
 #include "validation.hpp"
 #include "mesh/vertex.hpp"
 #include "image/stb_image.h"
 #include "obj/tiny_obj_loader.h"
-#include "../core/window.h"
+#include "../core/window.hpp"
 #include "../config/config.hpp"
-#include "../io/filesystem.h"
+#include "../io/filesystem.hpp"
 
 std::vector<Vertex> vertices;
 std::vector<uint32_t> indices;
@@ -119,8 +119,9 @@ void Device::getPhysicalDevice() {
 		throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 	}
 
-	const auto deviceIt = std::ranges::find_if(
-		physicalDevices, [&](const auto& phyDevice) { return checkDeviceSuitable(phyDevice); });
+	const auto deviceIt = std::ranges::find_if(physicalDevices, [&](const auto& phyDevice) {
+		return checkDeviceSuitable(phyDevice);
+	});
 
 	if (deviceIt != physicalDevices.end()) {
 		mPhysicalDevice = *deviceIt;
@@ -224,9 +225,9 @@ void Device::createLogicalDevice() {
 	const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = mPhysicalDevice.getQueueFamilyProperties();
 
 	for (uint32_t i = 0; i < queueFamilyProperties.size(); ++i) {
-		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics &&
-		    queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eCompute &&
-		    mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
+		if (queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eGraphics
+			&& queueFamilyProperties[i].queueFlags & vk::QueueFlagBits::eCompute
+			&& mPhysicalDevice.getSurfaceSupportKHR(i, *mSurface)) {
 			mQueueIndex = i;
 			break;
 		}
@@ -402,20 +403,20 @@ void Device::createGraphicsDescriptorSets() {
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		writer.writeBuffer(
-			*mGraphicsDescriptorSets[i],
-			0,
-			vk::DescriptorType::eUniformBuffer,
-			**mUniformBuffers[i],
-			0,
-			sizeof(UniformBufferObject))
-		.writeImage(
-			*mGraphicsDescriptorSets[i],
-			1,
-			vk::DescriptorType::eCombinedImageSampler,
-			mTextureSampler,
-			mTextureImage.imageView(),
-			vk::ImageLayout::eShaderReadOnlyOptimal)
-		.update();
+					*mGraphicsDescriptorSets[i],
+					0,
+					vk::DescriptorType::eUniformBuffer,
+					**mUniformBuffers[i],
+					0,
+					sizeof(UniformBufferObject))
+				.writeImage(
+					*mGraphicsDescriptorSets[i],
+					1,
+					vk::DescriptorType::eCombinedImageSampler,
+					mTextureSampler,
+					mTextureImage.imageView(),
+					vk::ImageLayout::eShaderReadOnlyOptimal)
+				.update();
 	}
 }
 
@@ -736,7 +737,8 @@ bool Device::checkDeviceSuitable(const vk::raii::PhysicalDevice& phyDevice) {
 	bool supportsShaderDrawParameters = features2.get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters;
 	bool supportsDynamicRendering = features2.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering;
 	bool supportsSynchronization2 = features2.get<vk::PhysicalDeviceVulkan13Features>().synchronization2;
-	bool supportsExtendedDynamicState = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+	bool supportsExtendedDynamicState = features2.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().
+			extendedDynamicState;
 	bool supportsRequiredFeatures =
 			supportsSamplerAnisotropy &&
 			supportsShaderDrawParameters &&
