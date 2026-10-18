@@ -54,7 +54,7 @@ private:
 
 	void createDescriptorPool();
 
-	void loadModel(const char* path);
+	static void loadModel(const char* path);
 
 	void createBuffers();
 
